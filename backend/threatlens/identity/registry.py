@@ -156,13 +156,17 @@ class Registry:
 
     # ------------------------------------------------------------ agents
 
-    async def create_agent(self, agent_id: str, role: str, owner: str) -> Agent:
+    async def create_agent(
+        self, agent_id: str, role: str, owner: str, grants: dict[str, list[str]] | None = None
+    ) -> Agent:
         if not AGENT_ID_RE.match(agent_id):
             raise ValueError("agent_id must be 3-64 chars of lowercase letters, digits and hyphens")
         if agent_id in self._agents:
             raise AgentExists(agent_id)
         contract = self.contract(role)
-        agent = Agent(agent_id=agent_id, role=role, role_version=contract.version, owner=owner)
+        agent = Agent(
+            agent_id=agent_id, role=role, role_version=contract.version, owner=owner, grants=grants or {}
+        )
         await self.store.save_agent(agent)
         self._agents[agent_id] = agent
         return agent
@@ -175,6 +179,11 @@ class Registry:
 
     def agents(self) -> list[Agent]:
         return sorted(self._agents.values(), key=lambda a: a.agent_id)
+
+    def grants(self, agent_id: str) -> dict[str, list[str]]:
+        """What the agent's credentials permit. Defaults to its contract's tools on any resource."""
+        agent = self.agent(agent_id)
+        return agent.grants or {t: ["**"] for t in self.contract(agent.role).allowed_tools}
 
     async def set_status(self, agent_id: str, status: AgentStatus, drift: float | None = None) -> Agent:
         agent = self.agent(agent_id)
@@ -195,7 +204,7 @@ class Registry:
         return self._mint(
             agent_id=agent_id,
             contract=contract,
-            scopes=list(contract.allowed_tools),
+            scopes=list(self.grants(agent_id)),
             chain=[agent_id],
             root_role=contract.role,
             ttl_s=self.settings.agent_token_ttl_s,
@@ -261,7 +270,7 @@ class Registry:
             raise DelegationDenied(f"delegation depth {depth} exceeds {caller_contract.delegation.max_depth}")
 
         callee_contract = self.contract(callee.role)
-        scopes = [s for s in callee_contract.allowed_tools if s in caller.scopes]
+        scopes = [s for s in self.grants(callee_id) if s in caller.scopes]
         remaining = int((caller.expires_at - utcnow()).total_seconds())
         if remaining <= 0:
             raise DelegationDenied("caller token has expired")

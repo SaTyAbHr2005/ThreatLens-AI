@@ -34,6 +34,11 @@ class Settings(BaseSettings):
     # Agents
     agent_mode: Literal["llm", "replay"] = "replay"
     roles_dir: Path = Path(__file__).resolve().parents[2] / "roles"  # backend/roles
+    catalog_dir: Path = Path(__file__).resolve().parents[2] / "catalog"  # backend/catalog
+
+    # Where the gateway forwards allowed tool calls (POST {url}/tools/{tool}).
+    # The mock enterprise (M8) serves them; production points at real tool servers.
+    tools_base_url: str | None = None
 
     # Free LLM providers (all optional; the router skips any without a key/url)
     groq_api_key: str | None = None

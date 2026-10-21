@@ -172,6 +172,9 @@ class Agent(_Model):
     status: AgentStatus = AgentStatus.active
     drift: float = Field(0.0, ge=0, le=100)
     created_at: datetime = Field(default_factory=utcnow)
+    # What the agent's credentials permit (IAM), as tool -> resource globs. Usually broader
+    # than the Role Contract, as in real deployments. Empty = the contract's tools, any resource.
+    grants: dict[str, list[str]] = Field(default_factory=dict)
 
     @property
     def trust(self) -> float:
@@ -228,6 +231,9 @@ class ActionEvent(_Model):
     risk: float | None = Field(None, ge=0, le=100)
     decision: DecisionType | None = None
     shadow: bool = False  # scored in shadow mode: would-be decision, not enforced
+    would_be: DecisionType | None = None  # shadow mode: what enforce mode would have done
+    rule: str | None = None  # policy rule that produced the decision
+    reason: str | None = None  # human-readable reason for the decision
     alert_id: str | None = None
     label: str | None = None  # ground truth, replay/eval mode only
 

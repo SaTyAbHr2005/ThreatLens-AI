@@ -9,6 +9,8 @@ from fastapi.middleware.cors import CORSMiddleware
 from threatlens import __version__
 from threatlens.core import LLMRouter, bus, get_settings
 from threatlens.core import db
+from threatlens.gateway import Catalog, Gateway, HttpToolConnector, UnconfiguredConnector, attach_mongo_sinks
+from threatlens.gateway.router import router as gateway_router
 from threatlens.identity import MemoryRegistryStore, MongoRegistryStore, Registry
 from threatlens.identity.router import router as identity_router
 
@@ -28,17 +30,25 @@ async def lifespan(app: FastAPI):
 
     # Production always persists to Atlas (startup fails loudly if it can't).
     # dev/test fall back to memory so the API still runs without a database.
-    if db_ok or settings.env == "prod":
+    persist = db_ok or settings.env == "prod"
+    if persist:
         store = MongoRegistryStore(app.state.db)
     else:
-        log.warning("MongoDB unreachable: identity state is in memory only and will be lost on restart")
+        log.warning("MongoDB unreachable: identity state and events are in memory only and will be lost on restart")
         store = MemoryRegistryStore()
     app.state.registry = Registry(store, settings)
     await app.state.registry.load()
 
+    connector = HttpToolConnector(settings.tools_base_url) if settings.tools_base_url else UnconfiguredConnector()
+    app.state.gateway = Gateway(app.state.registry, Catalog.load(settings.catalog_dir), connector, settings=settings)
+    unsubscribe = attach_mongo_sinks(bus, app.state.db) if persist else []
+
     app.state.llm = LLMRouter.from_settings(settings)
     yield
     await bus.drain()
+    for off in unsubscribe:
+        off()
+    await connector.aclose()
     await app.state.llm.aclose()
     await db.close()
 
@@ -53,6 +63,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 app.include_router(identity_router)
+app.include_router(gateway_router)
 
 
 @app.get("/v1/health")
@@ -66,5 +77,7 @@ async def health() -> dict:
         "db": "ok" if db_ok else "unreachable",
         "roles": len(app.state.registry.roles()),
         "agents": len(app.state.registry.agents()),
+        "tools": len(app.state.gateway.catalog.tools),
+        "tool_backend": "configured" if settings.tools_base_url else "not configured",
         "llm": app.state.llm.status(),
     }

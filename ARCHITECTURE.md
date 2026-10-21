@@ -39,7 +39,7 @@ The system is split into **12 modules**. Each one has a single owner, a public i
 |----|--------|--------|--------------|--------|
 | **M0** | Core Platform | `backend/threatlens/core` | Config, schemas, DB, event bus, auth primitives, **free LLM router** | new |
 | **M1** | Identity & Role Registry | `backend/threatlens/identity` | Agents, Role Contracts, amendments, tokens, delegation | new |
-| **M2** | Gateway & SDK | `backend/threatlens/gateway`, `sdk/` | Policy Enforcement Point: intercept → score → enforce | new |
+| **M2** | Gateway & SDK | `backend/threatlens/gateway`, `backend/threatlens_sdk` | Policy Enforcement Point: intercept → score → enforce | new |
 | **M3** | Content Forensics | `backend/threatlens/scanner` | Decode hidden instructions, injection/phishing/URL scoring (ONNX, torch-free) | **ThreatLens v1** |
 | **M4** | Behavioral Detection | `backend/threatlens/detection` | Signals S0–S8 | new + v1 Isolation Forest |
 | **M5** | Risk Fusion & Explainability | `backend/threatlens/fusion` | 0–100 risk, drift score, factors, narrative, counterfactual | **v1** fusion + explainability |
@@ -203,16 +203,31 @@ enforcement_mode: enforce                 # shadow = score + log only (staged ro
 
 ### M2 · Gateway & SDK
 
+**Grants vs. Role Contract (the key distinction).** An agent's **grants** are what its credentials permit (IAM): tool → resource globs, usually broader than the job needs, as in real deployments. Its **Role Contract** is what the job *is*. At the normal tier the gateway enforces grants (plus "no tools outside the job"), so a hijacked agent reading data its credentials permit **is allowed**, exactly as the problem statement describes, and detection must catch it. Containment then snaps the agent back from its grants to its contract.
+
 **Responsibilities**
-- `POST /v1/gateway/tool-call`: the single choke point. It runs the lifecycle in §3.
-- `POST /v1/gateway/content`: registers untrusted content read outside a tool call.
-- **Downstream token exchange (bypass prevention):** for every allowed call, the gateway mints a short-lived token scoped to exactly that tool and resource (modeled on OAuth 2.0 Token Exchange, RFC 8693, with the delegation chain in the `act` claim). The mock tools **reject agent tokens**, so a hijacked agent can't skip the gateway (scenario A7).
-- **Shadow mode:** when a role has `enforcement_mode: shadow`, the gateway scores and logs but always allows. The console shows what *would* have been blocked.
-- **Fail modes:** for `sensitivity ≥ confidential`, fail closed if the engine errors. Otherwise fail open, with logging.
-- **Python SDK** (`sdk/threatlens_sdk`, ~150 lines): `ThreatLensClient(api_url, token).call(tool, **args)` and a `@guarded_tool` decorator. It handles token refresh and decision exceptions (`ActionDenied`, `ApprovalRequired`, `AgentQuarantined`).
+- `POST /v1/gateway/tool-call`: the single choke point. It runs the lifecycle in §3. The HTTP status mirrors the decision: 200 allow · 202 held for approval · 403 deny · 423 quarantined · 502 tool failed.
+- `POST /v1/gateway/content`: registers untrusted content read outside a tool call. It becomes provenance taint.
+- **Tool catalog** (`backend/catalog/tools.yaml`): how each tool's resource is derived from its arguments, whether it sends data out (egress), and whether its output is untrusted. Unknown tools are denied. Paths are normalized, so `/procurement/../hr/x` and `//hr/x` can't dodge a scope or a label.
+- **Sensitivity labels** (`backend/catalog/labels.yaml`, the `SensitivityLabeler` adapter): sensitivity, data class, trust, and **canary** flags per resource.
+- **Policy Decision Point** (`gateway/policy.py`), in order:
+  1. isolated → quarantine
+  2. tool outside the token's scope → deny
+  3. resource outside grants → deny
+  4. tool outside the contract → deny
+  5. rate above the role envelope (2× normally, 1× when contained) → deny
+  6. *Restrict / Step-up only:* resource outside the contract scope of any agent in the chain, data above the sensitivity ceiling, or egress outside the allowlist → deny
+  7. *Step-up only:* sensitive data or external egress → held for approval
+- **Tiers** come from the agent's status, which M6 sets (`restricted`, `step_up`, `quarantined`, or drift ≥ 40 → monitor). A scorer can also raise the tier for the current call (`tier_floor`, e.g. a canary tripwire).
+- **Downstream token exchange (bypass prevention):** for every allowed call, the gateway mints a 60-second token bound to exactly that tool and resource (modeled on OAuth 2.0 Token Exchange, RFC 8693, with the delegation chain in the `act` claim). Tools verify it with `verify_downstream` and **reject agent tokens**, so a hijacked agent can't skip the gateway (scenario A7).
+- **Session state:** step count, rate window, recent actions, and the provenance taint set, per `(agent, session)`.
+- **Shadow mode:** when a role has `enforcement_mode: shadow`, the gateway scores and logs but always allows. Each event records the decision it *would* have made (`would_be`).
+- **Fail modes:** if the scorer errors, data at `confidential` or above is blocked (`FAIL_MODE_SENSITIVE=closed`). Everything else continues with logging.
+- **Plug-in points for later modules:** `ActionScorer` (M4 + M5) and `ContentScanner` (M3). Until they land, the gateway runs with no scores and hash-only content tracking.
+- **Python SDK** (`backend/threatlens_sdk`, depends only on httpx): `ThreatLensClient` / `AsyncThreatLensClient` with `call(tool, **args)`, `register_content`, and `delegate`. It refreshes tokens automatically and turns decisions into exceptions (`ActionDenied`, `ApprovalRequired`, `AgentQuarantined`, `AuthError`, `ToolFailed`). Agent frameworks call it from their tool functions or callback hooks.
 - **MCP proxy** *(stretch)*: exposes ThreatLens as an MCP server in front of real MCP tool servers.
 
-**Done when:** the SDK call path works end to end, and a quarantined agent gets `AgentQuarantined` on its next call.
+**Done when:** the SDK call path works end to end, and a quarantined agent gets `AgentQuarantined` on its next call. ✅ Covered by `tests/gateway/`, including A1 (credentials pass, exfil blocked), A4, A7, shadow mode, and fail-closed.
 
 ### M3 · Content Forensics (reused ThreatLens v1)
 

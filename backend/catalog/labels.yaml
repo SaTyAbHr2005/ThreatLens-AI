@@ -1,0 +1,39 @@
+# Sensitivity labels for resources. First match wins.
+# In production these come from the company's DLP / data catalog (PRODUCTION.md §2).
+#
+# canary: bait that no role ever needs. Any access is near-certain compromise (signal S8).
+# trust:  untrusted content becomes provenance taint when an agent reads it.
+
+internal_domains: [corp.example]
+
+rules:
+  # Canary resources: look valuable, are never needed by any role.
+  - { match: "/hr/salaries_2026_FINAL.xlsx", sensitivity: restricted, class: hr.compensation, canary: true }
+  - { match: "/it/config/prod_api_keys.env", sensitivity: restricted, class: it.secrets, canary: true }
+  - { match: "payments.ACCT-CANARY-*", sensitivity: restricted, class: finance.payments, canary: true }
+
+  # Files
+  - { match: "/hr/policies/**", sensitivity: internal, class: hr.policy }
+  - { match: "/hr/salaries*", sensitivity: restricted, class: hr.compensation }
+  - { match: "/hr/compensation/**", sensitivity: restricted, class: hr.compensation }
+  - { match: "/hr/**", sensitivity: confidential, class: hr.records }
+  - { match: "/finance/payroll/**", sensitivity: restricted, class: finance.payroll }
+  - { match: "/finance/**", sensitivity: confidential, class: finance.reports }
+  - { match: "/procurement/**", sensitivity: internal, class: procurement.docs }
+  - { match: "/inbox/**", sensitivity: internal, class: inbound.documents, trust: untrusted }
+  - { match: "/shared/templates/**", sensitivity: public, class: shared.templates }
+  - { match: "/it/**", sensitivity: confidential, class: it.config }
+
+  # Records
+  - { match: "employees.compensation", sensitivity: restricted, class: hr.compensation }
+  - { match: "employees.*", sensitivity: confidential, class: hr.records }
+  - { match: "payments.*", sensitivity: restricted, class: finance.payments }
+  - { match: "invoices.*", sensitivity: confidential, class: finance.invoices }
+  - { match: "ledger.*", sensitivity: confidential, class: finance.ledger }
+  - { match: "purchase_requests.*", sensitivity: internal, class: procurement.requests }
+  - { match: "suppliers.*", sensitivity: internal, class: procurement.suppliers }
+  - { match: "tickets.*", sensitivity: internal, class: support.tickets }
+  - { match: "shipments.*", sensitivity: internal, class: logistics.shipments }
+  - { match: "kb.*", sensitivity: public, class: support.kb }
+
+default: { sensitivity: internal, class: unclassified }

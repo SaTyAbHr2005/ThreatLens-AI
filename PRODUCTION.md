@@ -45,7 +45,7 @@ flowchart LR
 
 | Mode | How it connects | Enforcement | When to use |
 |------|----------------|-------------|-------------|
-| **Inline SDK** | `@guarded_tool` decorator or callback hook in LangGraph, CrewAI, OpenAI Agents SDK, Google ADK, and similar frameworks | Full: allow, restrict, step-up, isolate | Agents the company builds itself |
+| **Inline SDK** | `ThreatLensClient.call(...)` from tool functions or callback hooks in LangGraph, CrewAI, OpenAI Agents SDK, Google ADK, and similar frameworks | Full: allow, restrict, step-up, isolate | Agents the company builds itself |
 | **MCP / egress proxy** | ThreatLens runs as an MCP proxy in front of MCP tool servers, or as an **Envoy `ext_authz`** policy service on the agents' egress proxy | Full, with no code changes to the agent | Third-party or vendor agents the company can't modify |
 | **Passive telemetry** | Ingest OpenTelemetry spans (GenAI semantic conventions) or tool-server audit logs | Detect + explain. Containment happens through **IdP token revocation** or a SOAR playbook. | Quick start, or for agents where inline enforcement isn't allowed yet |
 

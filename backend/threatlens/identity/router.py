@@ -106,6 +106,8 @@ class AgentIn(BaseModel):
     agent_id: str
     role: str
     owner: str
+    # Credentials' permissions (tool -> resource globs). Omit to grant the contract's tools.
+    grants: dict[str, list[str]] | None = None
 
 
 class AgentCreated(BaseModel):
@@ -138,7 +140,7 @@ def get_agent(agent_id: str, reg: Registry = Depends(registry)):
 )
 async def create_agent(body: AgentIn, reg: Registry = Depends(registry)):
     try:
-        agent = await reg.create_agent(body.agent_id, body.role, body.owner)
+        agent = await reg.create_agent(body.agent_id, body.role, body.owner, body.grants)
         return AgentCreated(agent=agent, token=reg.issue_token(agent.agent_id))
     except ValueError as e:
         raise HTTPException(422, str(e)) from e

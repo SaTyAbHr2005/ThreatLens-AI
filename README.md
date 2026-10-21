@@ -129,7 +129,8 @@ ThreatLensAI/
 │   ├── intel/         # M7  trends, signatures, fleet immunity, arena
 │   └── api/           # M10 routers, websocket, analyst auth, metrics
 ├── backend/Dockerfile # the image Render runs (and docker compose locally)
-├── sdk/               # threatlens_sdk (Python client + @guarded_tool)
+├── backend/threatlens_sdk/ # Python SDK for agents (depends only on httpx)
+├── backend/catalog/   # tool catalog + sensitivity labels (incl. canaries)
 ├── sim/               # M8  mock enterprise, agents (llm/ + replay/), scenarios, red team
 ├── eval/              # M9  generate, run_eval, load_test, results/
 ├── backend/roles/     # Role Contract YAMLs (contracts as code)
@@ -238,6 +239,7 @@ Free tiers sleep when idle and have memory and rate limits. See [ARCHITECTURE.md
 | `ML_SERVICE_URL` | Leave empty to run models inside the API (default). Set it only if you split models into a second Render service. |
 | `DISCORD_WEBHOOK_URL` · `RESEND_API_KEY` | Alert notifications (optional) |
 | `CORS_ORIGINS` | The Vercel domain |
+| `TOOLS_BASE_URL` | Where the gateway forwards allowed tool calls. Empty until the mock enterprise (M8) lands. |
 | `FAIL_MODE_SENSITIVE` | `closed` (default) or `open` when the engine is unavailable |
 
 ## Production readiness
