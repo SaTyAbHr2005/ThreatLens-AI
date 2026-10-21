@@ -12,6 +12,9 @@ from threatlens.core import db
 from threatlens.identity import MemoryRegistryStore, MongoRegistryStore, Registry
 from threatlens.identity.router import router as identity_router
 
+# Send ThreatLens warnings (unreachable DB, tampered contracts, ...) to stdout,
+# which Docker and Render's log viewer capture. Uvicorn only configures its own loggers.
+logging.basicConfig(level=logging.INFO, format="%(levelname)s:     %(name)s: %(message)s")
 log = logging.getLogger(__name__)
 
 
