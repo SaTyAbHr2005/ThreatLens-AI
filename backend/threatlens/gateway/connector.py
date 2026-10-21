@@ -1,6 +1,6 @@
 """ToolConnector adapter: how allowed calls reach the real tools.
 
-Hackathon: the mock enterprise over HTTP. Production: MCP servers / SaaS APIs
+Reference build: the mock enterprise over HTTP. Production: MCP servers / SaaS APIs
 behind the same `call` method (PRODUCTION.md §2).
 """
 
@@ -13,6 +13,8 @@ from pydantic import BaseModel
 class ToolResult(BaseModel):
     data: Any = None
     text: str | None = None  # readable content, scanned when the tool's output is untrusted
+    raw_b64: str | None = None  # original bytes (e.g. a PDF), needed to find hidden text
+    media_type: str | None = None
     bytes: int = 0
 
 

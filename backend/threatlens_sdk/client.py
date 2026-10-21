@@ -68,6 +68,14 @@ class _Base:
     def _call_body(self, tool: str, args: dict[str, Any]) -> dict[str, Any]:
         return {"session_id": self.session_id, "tool": tool, "args": args, "host": self.host, "pid": os.getpid()}
 
+    def _content_body(self, source: str, text: str, carrier: str, raw: bytes | None,
+                      media_type: str | None) -> dict[str, Any]:
+        body: dict[str, Any] = {"session_id": self.session_id, "source": source, "carrier": carrier, "text": text}
+        if raw is not None:
+            body["content_b64"] = base64.b64encode(raw).decode()
+            body["media_type"] = media_type
+        return body
+
     def _needs_refresh(self) -> bool:
         c = _claims(self.token)
         # Delegated tokens can't be refreshed; the caller delegates again instead.
@@ -92,11 +100,13 @@ class ThreatLensClient(_Base):
                             headers=self._headers())
         return _raise_for(r)
 
-    def register_content(self, source: str, text: str, carrier: str = "text") -> dict[str, Any]:
-        """Report untrusted content the agent read (e.g. a document handed to it in its task)."""
+    def register_content(self, source: str, text: str = "", carrier: str = "text", *,
+                         raw: bytes | None = None, media_type: str | None = None) -> dict[str, Any]:
+        """Report untrusted content the agent read (e.g. a document handed to it in its task).
+        Pass the original bytes as `raw` for PDFs so hidden text can be found."""
         self._refresh()
         r = self._http.post(self._url("/v1/gateway/content"), headers=self._headers(),
-                            json={"session_id": self.session_id, "source": source, "carrier": carrier, "text": text})
+                            json=self._content_body(source, text, carrier, raw, media_type))
         return _raise_for(r)
 
     def delegate(self, callee_id: str) -> "ThreatLensClient":
@@ -130,11 +140,11 @@ class AsyncThreatLensClient(_Base):
                                   headers=self._headers())
         return _raise_for(r)
 
-    async def register_content(self, source: str, text: str, carrier: str = "text") -> dict[str, Any]:
+    async def register_content(self, source: str, text: str = "", carrier: str = "text", *,
+                               raw: bytes | None = None, media_type: str | None = None) -> dict[str, Any]:
         await self._refresh()
         r = await self._http.post(self._url("/v1/gateway/content"), headers=self._headers(),
-                                  json={"session_id": self.session_id, "source": source, "carrier": carrier,
-                                        "text": text})
+                                  json=self._content_body(source, text, carrier, raw, media_type))
         return _raise_for(r)
 
     async def delegate(self, callee_id: str) -> "AsyncThreatLensClient":

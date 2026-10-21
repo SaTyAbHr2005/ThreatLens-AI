@@ -263,6 +263,7 @@ class ContentItem(_Model):
     hidden_spans: list[HiddenSpan] = Field(default_factory=list)
     decoded_text: str = Field("", max_length=2000)
     scored_by: str = "heuristic"  # model | heuristic | llm | signature
+    findings: list[str] = Field(default_factory=list)  # plain-language reasons behind the scores
     created_at: datetime = Field(default_factory=utcnow)
 
 

@@ -13,6 +13,8 @@ from threatlens.gateway import Catalog, Gateway, HttpToolConnector, Unconfigured
 from threatlens.gateway.router import router as gateway_router
 from threatlens.identity import MemoryRegistryStore, MongoRegistryStore, Registry
 from threatlens.identity.router import router as identity_router
+from threatlens.scanner import ContentForensics, PromptGuard
+from threatlens.scanner.router import router as forensics_router
 
 # Send ThreatLens warnings (unreachable DB, tampered contracts, ...) to stdout,
 # which Docker and Render's log viewer capture. Uvicorn only configures its own loggers.
@@ -39,8 +41,18 @@ async def lifespan(app: FastAPI):
     app.state.registry = Registry(store, settings)
     await app.state.registry.load()
 
+    catalog = Catalog.load(settings.catalog_dir)
+    prompt_guard = (
+        PromptGuard(settings.groq_api_key, settings.prompt_guard_model)
+        if settings.groq_api_key and settings.prompt_guard_model
+        else None
+    )
+    app.state.forensics = ContentForensics(prompt_guard, internal_domains=tuple(catalog.internal_domains))
+
     connector = HttpToolConnector(settings.tools_base_url) if settings.tools_base_url else UnconfiguredConnector()
-    app.state.gateway = Gateway(app.state.registry, Catalog.load(settings.catalog_dir), connector, settings=settings)
+    app.state.gateway = Gateway(
+        app.state.registry, catalog, connector, scanner=app.state.forensics, settings=settings
+    )
     unsubscribe = attach_mongo_sinks(bus, app.state.db) if persist else []
 
     app.state.llm = LLMRouter.from_settings(settings)
@@ -49,6 +61,7 @@ async def lifespan(app: FastAPI):
     for off in unsubscribe:
         off()
     await connector.aclose()
+    await app.state.forensics.aclose()
     await app.state.llm.aclose()
     await db.close()
 
@@ -64,6 +77,7 @@ app.add_middleware(
 )
 app.include_router(identity_router)
 app.include_router(gateway_router)
+app.include_router(forensics_router)
 
 
 @app.get("/v1/health")
@@ -79,5 +93,6 @@ async def health() -> dict:
         "agents": len(app.state.registry.agents()),
         "tools": len(app.state.gateway.catalog.tools),
         "tool_backend": "configured" if settings.tools_base_url else "not configured",
+        "content_scanner": "prompt_guard+heuristics" if app.state.forensics.prompt_guard else "heuristics",
         "llm": app.state.llm.status(),
     }

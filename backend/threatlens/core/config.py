@@ -49,6 +49,8 @@ class Settings(BaseSettings):
     openrouter_models: str = ""  # comma-separated free model ids
     ollama_url: str | None = None
     ollama_model: str = "llama3.1"
+    # Injection classifier served by Groq (uses GROQ_API_KEY); empty disables it.
+    prompt_guard_model: str = "meta-llama/llama-prompt-guard-2-86m"
 
     # Other services
     ml_service_url: str | None = None

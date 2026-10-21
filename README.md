@@ -106,7 +106,7 @@ The design language comes from **security documents**. Each agent has a passport
 | Layer | Stack | Free hosting |
 |-------|-------|--------------|
 | API / gateway | FastAPI, Pydantic v2, PyMongo async, PyJWT | **Render** free web service (Docker) |
-| ML | fastembed (ONNX MiniLM), onnxruntime (int8 injection classifier), scikit-learn, XGBoost. No torch. | Inside the Render service |
+| ML | Llama Prompt Guard 2 (Groq API), pdfminer.six, BeautifulSoup, fastembed (ONNX MiniLM), scikit-learn. No torch. | Inside the Render service |
 | LLMs | Router across **Groq**, **Gemini**, **OpenRouter** free models, **Ollama** | Free tiers / local |
 | Database | MongoDB | **MongoDB Atlas M0** |
 | Frontend | React, Vite, TypeScript, Tailwind v4, three.js / R3F, GSAP, Lenis, d3, cmdk | **Vercel** Hobby |
@@ -240,13 +240,14 @@ Free tiers sleep when idle and have memory and rate limits. See [ARCHITECTURE.md
 | `DISCORD_WEBHOOK_URL` · `RESEND_API_KEY` | Alert notifications (optional) |
 | `CORS_ORIGINS` | The Vercel domain |
 | `TOOLS_BASE_URL` | Where the gateway forwards allowed tool calls. Empty until the mock enterprise (M8) lands. |
+| `PROMPT_GUARD_MODEL` | Injection classifier served by Groq (uses `GROQ_API_KEY`). Default `meta-llama/llama-prompt-guard-2-86m`. Leave it empty for heuristics only. |
 | `FAIL_MODE_SENSITIVE` | `closed` (default) or `open` when the engine is unavailable |
 
 ## Production readiness
 
-The hackathon build simulates the *enterprise*, not the *security*. Gateway enforcement, detection, explanations, containment, token exchange, shadow mode, and the CI regression suite are all real. Every simulated piece sits behind an adapter with a named production replacement:
+The reference build simulates the *enterprise*, not the *security*. Gateway enforcement, detection, explanations, containment, token exchange, shadow mode, and the CI regression suite are all real. Every simulated piece sits behind an adapter with a named production replacement:
 
-| Real world | Hackathon stand-in |
+| Real world | Reference build stand-in |
 |-----------|-------------------|
 | Entra / Okta / SPIFFE agent identity | Local JWT issuer |
 | MCP servers & SaaS APIs | Mock enterprise |

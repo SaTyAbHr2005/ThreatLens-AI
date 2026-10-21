@@ -1,8 +1,8 @@
 # ThreatLens AI — Production & Real-World Deployment
 
-The hackathon build runs on free tiers against a simulated enterprise. This document explains **how the same system runs inside a real company**: what plugs into what, how it scales, how it fails safely, and how a security team rolls it out without breaking their agents.
+The reference build runs on free tiers against a simulated enterprise. This document explains **how the same system runs inside a real company**: what plugs into what, how it scales, how it fails safely, and how a security team rolls it out without breaking their agents.
 
-> **Design rule: production-shaped, not demo-shaped.** Every place where the hackathon uses something simulated sits behind a small adapter with the same interface its production replacement would use. Going to production means swapping adapters, not rewriting modules.
+> **Design rule: production-shaped, not demo-shaped.** Every place where the reference build uses something simulated sits behind a small adapter with the same interface its production replacement would use. Going to production means swapping adapters, not rewriting modules.
 
 ---
 
@@ -57,15 +57,15 @@ Detection is useless if a hijacked agent can call tools directly. In production:
 2. **Network policy:** agent workloads can only reach the gateway and the LLM endpoint. Tool services only accept traffic from the gateway (Kubernetes NetworkPolicy or a service mesh with mTLS).
 3. **Delegation uses RFC 8693's `act` (actor) claim,** so the full agent chain is carried inside the token itself and can be verified at every hop.
 
-> **Hackathon:** the gateway mints downstream tokens, and the mock tools reject agent tokens. Scenario **A7 (bypass attempt)** shows a hijacked agent calling a tool directly and getting refused.
+> **Reference build:** the gateway mints downstream tokens, and the mock tools reject agent tokens. Scenario **A7 (bypass attempt)** shows a hijacked agent calling a tool directly and getting refused.
 
 ---
 
 ## 2. Production adapters (the seams)
 
-Each module talks to the outside world through one of these adapters. In the hackathon each adapter has exactly one implementation. These are the swap points, not extra layers.
+Each module talks to the outside world through one of these adapters. In the reference build each adapter has exactly one implementation. These are the swap points, not extra layers.
 
-| Adapter | Hackathon implementation | Production implementation |
+| Adapter | Reference build | Production implementation |
 |---------|--------------------------|---------------------------|
 | `IdentityProvider` | Local JWT issuer (PyJWT) | Microsoft Entra / Okta workload or agent identities, or SPIFFE/SPIRE SVIDs. Revocation through the IdP API. |
 | `ToolConnector` | Mock enterprise FastAPI app | Real MCP servers, SaaS APIs, internal services, called with gateway-minted downstream tokens |
@@ -103,7 +103,7 @@ Content scanning is also triggered when content is *read*, before the agent can 
 
 The gateway is stateless, and all per-agent state is keyed by `agent_id` in Redis. So the gateway scales horizontally, and stream workers partition by `agent_id`.
 
-> **Hackathon:** we run a small load test (Locust or k6, both free) against the Docker Compose stack and report measured throughput and p95. We claim only those numbers.
+> **Reference build:** we run a small load test (Locust or k6, both free) against the Docker Compose stack and report measured throughput and p95. We claim only those numbers.
 
 ---
 
@@ -133,7 +133,7 @@ Security teams don't flip a new enforcement layer on overnight. ThreatLens is bu
 | **2. Enforce Restrict** | 1 week | Turn on scope snap-back for low-risk roles first. Step-up and Isolate stay in shadow. | Legit-work-preserved ≥ 99% |
 | **3. Full enforcement** | Ongoing | Step-up approvals in Slack/Teams. Isolate auto-applies above 90 for confirmed patterns (canary hit, sensitive read + unknown egress). | Weekly tuning review |
 
-`enforcement_mode: shadow | enforce` is a per-role setting in the Role Contract. **The hackathon build supports it too**, and the console shows what *would* have been blocked in shadow mode.
+`enforcement_mode: shadow | enforce` is a per-role setting in the Role Contract. **The reference build supports it too**, and the console shows what *would* have been blocked in shadow mode.
 
 ---
 
@@ -184,15 +184,15 @@ Security teams don't flip a new enforcement layer on overnight. ThreatLens is bu
 ## 8. Operating it day to day
 
 - **Dashboards:** fleet trust, alerts per role vs budget, gateway p99, stream lag, model versions in shadow vs enforce.
-- **Metrics endpoint:** Prometheus `/metrics` (decisions by tier, signal latency, cache hit rate). It's included in the hackathon build.
+- **Metrics endpoint:** Prometheus `/metrics` (decisions by tier, signal latency, cache hit rate). It's included in the reference build.
 - **Runbooks:** "Agent isolated", "False-positive spike", "Gateway latency SLO breach", "IdP revocation failing". Each has the console's deep links.
 - **On-call:** PagerDuty for ISOLATE on production-critical agents. Everything else goes to a ticket queue.
 
 ---
 
-## 9. Hackathon → production mapping (put this on a slide)
+## 9. Reference build → production mapping (put this on a slide)
 
-| Real-world piece | Hackathon stand-in | Same interface? |
+| Real-world piece | Reference build stand-in | Same interface? |
 |------------------|-------------------|-----------------|
 | Corporate agents on LangGraph/CrewAI/etc. | Python agents on the free LLM router + replay simulator | ✅ SDK |
 | Okta / Entra / SPIFFE agent identity | Local JWT issuer | ✅ `IdentityProvider` |
@@ -202,4 +202,4 @@ Security teams don't flip a new enforcement layer on overnight. ThreatLens is bu
 | SIEM / SOAR / Slack approvals | OCSF JSON export, Discord webhook, console approvals | ✅ `AlertExporter` / `Notifier` |
 | Kubernetes, multi-AZ | Vercel (web) + Render free (API, Docker) | Docker images are the same |
 
-**What's genuinely real in the hackathon build:** the gateway enforcement, all detection signals, fusion, explanations, containment, token exchange and bypass prevention, shadow/enforce modes, the CI regression suite, and the measured evaluation. Only the *environment* is simulated.
+**What's genuinely real in the reference build:** the gateway enforcement, all detection signals, fusion, explanations, containment, token exchange and bypass prevention, shadow/enforce modes, the CI regression suite, and the measured evaluation. Only the *environment* is simulated.

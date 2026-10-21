@@ -1,5 +1,7 @@
 """HTTP API for M2: the endpoints every agent calls."""
 
+import base64
+import binascii
 import json
 from typing import Any
 
@@ -41,7 +43,9 @@ class ContentIn(BaseModel):
     session_id: str = Field(pattern=SESSION_ID)
     source: str = Field(min_length=1, max_length=500)
     carrier: Carrier = "text"
-    text: str = Field(max_length=2_000_000)
+    text: str = Field("", max_length=2_000_000)
+    content_b64: str | None = Field(None, max_length=2_700_000, description="original bytes, e.g. a PDF")
+    media_type: str | None = Field(None, max_length=100)
 
 
 def gateway(request: Request) -> Gateway:
@@ -83,7 +87,17 @@ async def tool_call(
 @router.post("/content", response_model=ContentItem, status_code=201)
 async def register_content(body: ContentIn, token: str = Depends(bearer_token), gw: Gateway = Depends(gateway)):
     """Report untrusted content the agent read outside a tool call. It becomes provenance taint."""
+    if not body.text and not body.content_b64:
+        raise HTTPException(422, "send text or content_b64")
     try:
-        return await gw.register_content(token, body.session_id, body.source, body.carrier, body.text)
+        raw = base64.b64decode(body.content_b64, validate=True) if body.content_b64 else None
+    except (binascii.Error, ValueError) as e:
+        raise HTTPException(422, "content_b64 is not valid base64") from e
+    try:
+        return await gw.register_content(
+            token, body.session_id, body.source, body.carrier, body.text, raw, body.media_type
+        )
     except (InvalidToken, IdentityError) as e:
         raise _auth_error(e) from e
+    except BadToolArgs as e:
+        raise HTTPException(413, str(e)) from e

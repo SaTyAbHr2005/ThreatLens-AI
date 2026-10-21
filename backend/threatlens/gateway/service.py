@@ -5,6 +5,8 @@ Lifecycle of one call (ARCHITECTURE.md §3):
   forward with a per-call downstream token → scan untrusted output → publish.
 """
 
+import base64
+import binascii
 import logging
 from typing import Any
 
@@ -60,6 +62,14 @@ class ToolCallFailed(Exception):
         super().__init__(str(error))
         self.event_id = event_id
         self.status = error.status
+
+
+def _b64(data: str | None) -> bytes | None:
+    try:
+        return base64.b64decode(data, validate=True) if data else None
+    except (binascii.Error, ValueError):
+        log.warning("tool returned invalid raw_b64; scanning its text only")
+        return None
 
 
 def tier_for(agent: Agent) -> Tier:
@@ -165,8 +175,11 @@ class Gateway:
                     raise ToolCallFailed(event.id, e) from e
                 event.action.bytes_in = out.bytes
                 result.result = out.data
-                if resolved.untrusted_output and out.text:
-                    item = await self._register(session, resolved.resource, resolved.spec.carrier, out.text)
+                if resolved.untrusted_output and (out.text or out.raw_b64):
+                    raw = _b64(out.raw_b64)
+                    item = await self._register(
+                        session, resolved.resource, resolved.spec.carrier, out.text or "", raw, out.media_type
+                    )
                     result.content_id = item.id
             return result
         finally:
@@ -174,14 +187,15 @@ class Gateway:
             self.bus.publish(Topics.action_scored, event)
 
     async def register_content(
-        self, token: str, session_id: str, source: str, carrier: Carrier, text: str
+        self, token: str, session_id: str, source: str, carrier: Carrier, text: str,
+        raw: bytes | None = None, media_type: str | None = None,
     ) -> ContentItem:
         """An agent reports untrusted content it read outside a tool call (e.g. a file in its task)."""
         claims = self.registry.verify(token)
-        if len(text) > MAX_CONTENT_CHARS:
+        if len(text) > MAX_CONTENT_CHARS or (raw is not None and len(raw) > MAX_CONTENT_CHARS):
             raise BadToolArgs(f"content is larger than {MAX_CONTENT_CHARS} characters")
         session = self.sessions.get(claims.agent_id, session_id)
-        return await self._register(session, source, carrier, text)
+        return await self._register(session, source, carrier, text, raw, media_type)
 
     # ------------------------------------------------------------ internals
 
@@ -205,8 +219,14 @@ class Gateway:
             risk=event.risk,
         )
 
-    async def _register(self, session, source: str, carrier: Carrier, text: str) -> ContentItem:
-        item = await self.scanner.scan(source, carrier, text, TrustLevel.untrusted)
+    async def _register(self, session, source: str, carrier: Carrier, text: str,
+                        raw: bytes | None = None, media_type: str | None = None) -> ContentItem:
+        try:
+            item = await self.scanner.scan(source, carrier, text, TrustLevel.untrusted, raw, media_type)
+        except Exception:
+            # Unreadable content still counts as untrusted input: track it, unscored.
+            log.exception("content scan failed for %s", source)
+            item = await HashOnlyScanner().scan(source, carrier, text, TrustLevel.untrusted, raw, media_type)
         session.taint(item)
         self.bus.publish(Topics.content_scanned, item)
         return item

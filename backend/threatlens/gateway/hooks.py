@@ -40,7 +40,8 @@ class ActionScorer(Protocol):
 
 
 class ContentScanner(Protocol):
-    async def scan(self, source: str, carrier: Carrier, text: str, trust: TrustLevel) -> ContentItem: ...
+    async def scan(self, source: str, carrier: Carrier, text: str, trust: TrustLevel,
+                   raw: bytes | None = None, media_type: str | None = None) -> ContentItem: ...
 
 
 class NullScorer:
@@ -49,11 +50,12 @@ class NullScorer:
 
 
 class HashOnlyScanner:
-    async def scan(self, source: str, carrier: Carrier, text: str, trust: TrustLevel) -> ContentItem:
+    async def scan(self, source: str, carrier: Carrier, text: str, trust: TrustLevel,
+                   raw: bytes | None = None, media_type: str | None = None) -> ContentItem:
         return ContentItem(
             source=source,
             carrier=carrier,
             trust_level=trust,
-            sha256=hashlib.sha256(text.encode()).hexdigest(),
+            sha256=hashlib.sha256(raw if raw is not None else text.encode()).hexdigest(),
             scored_by="unscanned",
         )
