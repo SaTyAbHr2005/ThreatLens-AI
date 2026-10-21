@@ -1,0 +1,29 @@
+role: procurement
+version: 1
+purpose: >
+  Compare supplier prices and delivery terms, and create purchase requests
+  for approved suppliers on behalf of the procurement team.
+owner: procurement-team@corp.example
+allowed_tools:
+  - supplier_db.query
+  - files.read
+  - erp.create_pr
+  - email.send
+  - web.fetch
+resource_scopes:
+  files.read: ["/procurement/**", "/shared/templates/**", "/inbox/procurement/**"]
+  email.send: { recipients: ["*@corp.example"] }
+  web.fetch: ["api.supplier-portal.example"]
+data_sensitivity_ceiling: internal
+egress_allowlist: ["api.supplier-portal.example"]
+rate_envelope: { actions_per_min: 30, max_records_per_call: 500 }
+prototype_actions:
+  - query supplier prices for laptops
+  - compare delivery terms across three approved suppliers
+  - read the procurement policy document
+  - read a supplier quotation PDF from the procurement inbox
+  - create a purchase request for 20 monitors from an approved vendor
+  - email the procurement manager the price comparison
+  - fetch the latest catalogue from the supplier portal
+delegation: { may_call: [finance-agent], max_depth: 2 }
+enforcement_mode: enforce

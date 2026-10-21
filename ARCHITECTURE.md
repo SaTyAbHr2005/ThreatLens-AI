@@ -173,12 +173,12 @@ Each module lists: **responsibilities · public interface · done when**.
 
 **Public interface:** `get_contract(role, version)`, `issue_token(agent_id)`, `revoke(jti)`, `delegate(parent_token, callee_id)`, `amend(role, diff, signer)`, `active_amendments(role)`.
 
-**Done when:** creating an agent from `roles/procurement.yaml` returns a token, and delegating to an agent outside `may_call` raises an error.
+**Done when:** creating an agent from `backend/roles/procurement.yaml` returns a token, and delegating to an agent outside `may_call` raises an error.
 
 #### Role Contract example
 
 ```yaml
-# roles/procurement.yaml
+# backend/roles/procurement.yaml
 role: procurement
 version: 3
 purpose: >
@@ -241,7 +241,7 @@ This is the old ThreatLens Prompt Injection Analyzer, Email Analyzer, and URL An
   - URL reputation: v1 XGBoost (a few MB)
 - Models download at **build time** into the Docker image, because Render's free tier has no persistent disk.
 - **Model runner placement is a switch:** if `ML_SERVICE_URL` is unset, models run **in-process** (the default). If memory gets tight, the same code deploys as a **second free Render service** (`threatlens-ml`) and the API calls it over HTTP. Results are cached by `sha256` either way.
-- **Fallback chain:** ONNX models → LLM-router classification → heuristics only. Each `ContentItem` records which one scored it (`scored_by`).
+- **Fallback chain:** ONNX models → **Groq-hosted Llama Prompt Guard 2** (`meta-llama/llama-prompt-guard-2-86m`, free API, same model family as our ONNX classifier) → LLM-router classification → heuristics only. Each `ContentItem` records which one scored it (`scored_by`).
 
 > Content scanning happens **when content is read**, not on every action. So the remote model call is off the per-action hot path.
 
@@ -343,7 +343,7 @@ risk *= (1 − amendment_discount)                  # behavior explained by an a
 
 - **Mock enterprise** (FastAPI sub-app mounted at `/enterprise`, so it shares the API's Render service): supplier DB, sensitivity-labeled file tree, ERP, HR DB, ledger, email outbox, **external sink** (records any exfil attempt), and **canary resources**.
 - **Agents**
-  - **LLM mode:** tool-use loop via the LLM router (Groq Llama by default, since it's fast and its free tier supports tool calling), with a system prompt built from the Role Contract.
+  - **LLM mode:** tool-use loop via the LLM router (Groq `openai/gpt-oss-120b` by default: under 1 s per call on the free tier, with verified tool calling), with a system prompt built from the Role Contract.
   - **Replay mode:** deterministic generator from per-role tool/resource distributions. Used for baselines, evaluation, and the **offline demo fallback**.
 - **Scenarios**
 
@@ -497,7 +497,7 @@ The `label` field exists only in replay/eval mode. Indexes: `events {agent_id, t
 | Classic ML | scikit-learn (Isolation Forest, Logistic Regression), XGBoost | Reused v1 models, CPU-only |
 | Transformer models | **onnxruntime** with int8-quantized ONNX exports (no torch) | Fits in Render's free 512 MB next to the API |
 | PDF/HTML parsing | pypdf / pdfplumber, BeautifulSoup | Hidden-text extraction |
-| LLMs | **Groq** (Llama), **Google Gemini** (Flash), **OpenRouter** free models, **Ollama** (local) | All free tiers. Router with fallback (§9) |
+| LLMs | **Groq** (gpt-oss, Qwen), **Google Gemini** (Flash-Lite), **OpenRouter** free models (MiniMax, Nemotron), **Ollama** (local) | All free tiers. Router with fallback (§9) |
 | Auth | PyJWT, argon2-cffi | Agent + analyst tokens |
 | Frontend | React + Vite + TypeScript, Tailwind CSS v4, **three.js** via React Three Fiber + drei + postprocessing, **GSAP** (ScrollTrigger, SplitText, ScrambleText, Flip), **Lenis**, Zustand, TanStack Query, d3-scale/d3-shape, cmdk | See DESIGN.md |
 | Database | **MongoDB Atlas M0** | Free forever, 512 MB |
@@ -517,13 +517,14 @@ llm.tool_call(task="agent", messages=[...], tools=[...])    # → tool calls
 
 | Task | Primary | Fallback chain | Notes |
 |------|---------|----------------|-------|
-| `agent` (LLM-mode agents) | Groq · Llama 3.x 70B-class | Gemini Flash → OpenRouter free → Ollama → **replay mode** | Needs tool calling; Groq is fastest |
+| `agent` (LLM-mode agents) | Groq · `openai/gpt-oss-120b` | Gemini Flash-Lite → OpenRouter free → Ollama → **replay mode** | Needs tool calling; Groq is fastest |
 | `narrative` (alert headline) | Gemini Flash | Groq → template | Structured JSON in, 1–2 sentences out, cached |
 | `draft_contract` | Gemini Flash | Groq → empty template | Human must review |
 | `classify` (injection fallback) | Groq small model | Gemini → heuristics only | Only when the ONNX model fails to load or the ML service is down |
 | `arena` | All configured providers in parallel | n/a | That's the point of the arena |
 
 - Model IDs are **env-configurable** (`GROQ_MODEL`, `GEMINI_MODEL`, `OPENROUTER_MODELS=a,b,c`). Free model lineups change often, so check each provider's console before the event.
+- **Verified 2026-10-21** (chat + tool calling): Groq `openai/gpt-oss-120b`, `openai/gpt-oss-20b`, `qwen/qwen3.8-27b` · Gemini `gemini-3.5-flash-lite` · OpenRouter `minimax/minimax-m3.1-flash:free`, `nvidia/nemotron-3.5-super-vl:free`. Avoid `*-latest` aliases: they change underneath you. Retired since planning: Groq `llama-3.3-70b-versatile` and Gemini `gemini-2.5-flash` (for new keys).
 - **Per-provider token bucket** + response cache + exponential backoff. On a `429`, the router moves to the next provider in the chain.
 - `/v1/health` reports each provider's status. The Console shows it in the top status bar.
 - **Data hygiene:** free tiers may use prompts to improve their products, so only **synthetic** data ever goes to an LLM. That's guaranteed by design, since the enterprise is simulated.

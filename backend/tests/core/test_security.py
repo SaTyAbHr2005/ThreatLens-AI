@@ -46,6 +46,9 @@ def test_password_hashing():
     assert not verify_password(h, "wrong")
 
 
-def test_prod_refuses_dev_signing_key():
+def test_prod_refuses_dev_or_short_signing_key():
     with pytest.raises(ValueError):
-        Settings(env="prod")
+        Settings(env="prod", jwt_signing_key="dev-only-change-me")
+    with pytest.raises(ValueError):
+        Settings(env="prod", jwt_signing_key="too-short")
+    Settings(env="prod", jwt_signing_key="x" * 32)

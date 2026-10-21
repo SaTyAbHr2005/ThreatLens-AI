@@ -1,0 +1,28 @@
+role: finance
+version: 1
+purpose: >
+  Reconcile supplier invoices against purchase requests and the ledger,
+  and flag mismatches for the finance team to review.
+owner: finance-team@corp.example
+allowed_tools:
+  - erp.read_invoice
+  - erp.read_pr
+  - ledger.query
+  - files.read
+  - email.send
+resource_scopes:
+  erp.read_invoice: ["invoices.*"]
+  ledger.query: ["ledger.payables", "ledger.receivables"]
+  files.read: ["/finance/reconciliation/**", "/shared/templates/**"]
+  email.send: { recipients: ["*@corp.example"] }
+data_sensitivity_ceiling: confidential
+egress_allowlist: []
+rate_envelope: { actions_per_min: 30, max_records_per_call: 200 }
+prototype_actions:
+  - read invoice INV-2041 from the ERP
+  - match an invoice against its purchase request
+  - query the payables ledger for an unpaid supplier balance
+  - read last month's reconciliation report
+  - email the finance team a list of mismatched invoices
+delegation: { may_call: [], max_depth: 0 }
+enforcement_mode: enforce

@@ -132,7 +132,7 @@ ThreatLensAI/
 ├── sdk/               # threatlens_sdk (Python client + @guarded_tool)
 ├── sim/               # M8  mock enterprise, agents (llm/ + replay/), scenarios, red team
 ├── eval/              # M9  generate, run_eval, load_test, results/
-├── roles/             # Role Contract YAMLs
+├── backend/roles/     # Role Contract YAMLs (contracts as code)
 ├── web/               # M11 landing + console (see DESIGN.md)
 ├── docs/              # diagrams, screenshots, deck, free-tier-limits.md
 ├── .github/workflows/ # CI + scenario regression suite
@@ -229,7 +229,8 @@ Free tiers sleep when idle and have memory and rate limits. See [ARCHITECTURE.md
 | Variable | Purpose |
 |----------|---------|
 | `MONGO_URI` | MongoDB connection string |
-| `JWT_SIGNING_KEY` | Signs agent, downstream, and analyst tokens |
+| `JWT_SIGNING_KEY` | Signs agent, downstream, and analyst tokens, and Role Contract versions |
+| `ADMIN_API_KEY` | Sent as `X-Admin-Key` to create agents, amend roles, and draft contracts. Required in production. Optional locally. |
 | `AGENT_MODE` | `llm` or `replay` |
 | `GROQ_API_KEY` · `GEMINI_API_KEY` · `OPENROUTER_API_KEY` | Free LLM providers (all optional) |
 | `GROQ_MODEL` · `GEMINI_MODEL` · `OPENROUTER_MODELS` | Model IDs. Free lineups change, so check each provider's console. |

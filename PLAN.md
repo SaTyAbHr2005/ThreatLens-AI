@@ -125,7 +125,7 @@ The module definitions, interfaces, and "done when" tests are in [ARCHITECTURE.m
 | **Backend deploy** | **Render** free web service (Docker) | `render.yaml` blueprint. 512 MB, sleeps when idle → keep warm during judging. All models are torch-free ONNX baked into the image. |
 | Optional ML split | A 2nd **Render** free service | Only if the API's memory gets close to 512 MB |
 | Database | **MongoDB Atlas** M0 | 512 MB, TTL on raw events. Render's free Postgres expires after 30 days, so it isn't an option. |
-| Agent LLM | **Groq** free tier | Fast tool calling (Llama-class models) |
+| Agent LLM | **Groq** free tier | Fast tool calling (`openai/gpt-oss-120b`, `qwen/qwen3.8-27b`) |
 | Narratives / contract drafting | **Google Gemini** free tier | Flash-class model |
 | Extra models for the arena | **OpenRouter** free models | Several providers through one key |
 | Offline LLM | **Ollama** | Local fallback, no internet needed |

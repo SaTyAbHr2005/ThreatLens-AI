@@ -11,6 +11,7 @@ WORKDIR /app
 COPY pyproject.toml ./
 COPY threatlens ./threatlens
 RUN pip install .
+COPY roles ./roles
 
 RUN useradd --create-home app && chown -R app /app
 USER app

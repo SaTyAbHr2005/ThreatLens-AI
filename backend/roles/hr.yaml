@@ -1,0 +1,27 @@
+role: hr
+version: 1
+purpose: >
+  Answer employee questions about leave and HR policy, and update
+  non-compensation employee records on behalf of the HR team.
+owner: hr-team@corp.example
+allowed_tools:
+  - hr_db.query
+  - hr_db.update
+  - files.read
+  - email.send
+resource_scopes:
+  hr_db.query: ["employees.profile", "employees.leave"]
+  hr_db.update: ["employees.leave", "employees.contact"]
+  files.read: ["/hr/policies/**", "/shared/templates/**"]
+  email.send: { recipients: ["*@corp.example"] }
+data_sensitivity_ceiling: confidential
+egress_allowlist: []
+rate_envelope: { actions_per_min: 20, max_records_per_call: 50 }
+prototype_actions:
+  - look up an employee's remaining leave balance
+  - read the parental leave policy
+  - update an employee's emergency contact
+  - record approved annual leave for an employee
+  - email an employee the answer to a policy question
+delegation: { may_call: [], max_depth: 0 }
+enforcement_mode: enforce

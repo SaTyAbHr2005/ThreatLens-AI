@@ -10,4 +10,6 @@ os.environ.update(
     GEMINI_API_KEY="",
     OPENROUTER_API_KEY="",
     OLLAMA_URL="",
+    ADMIN_API_KEY="",
+    JWT_SIGNING_KEY="unit-test-signing-key-0123456789-abcdefgh",
 )

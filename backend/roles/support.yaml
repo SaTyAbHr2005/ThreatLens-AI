@@ -1,0 +1,26 @@
+role: support
+version: 1
+purpose: >
+  Triage customer support tickets, search the knowledge base, and draft
+  replies to customers about orders and invoices.
+owner: support-team@corp.example
+allowed_tools:
+  - tickets.read
+  - tickets.update
+  - kb.search
+  - email.send
+resource_scopes:
+  tickets.read: ["tickets.*"]
+  tickets.update: ["tickets.*"]
+  email.send: { recipients: ["*@customer.example", "*@corp.example"] }
+data_sensitivity_ceiling: internal
+egress_allowlist: []
+rate_envelope: { actions_per_min: 40, max_records_per_call: 20 }
+prototype_actions:
+  - read a new customer support ticket
+  - search the knowledge base for the refund policy
+  - tag a ticket as billing and set its priority
+  - draft a reply to a customer about a delayed order
+  - ask the finance agent for the status of one customer's invoice
+delegation: { may_call: [finance-agent], max_depth: 1 }
+enforcement_mode: enforce

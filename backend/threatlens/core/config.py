@@ -1,6 +1,7 @@
 """Typed settings loaded from environment variables (and `.env` in development)."""
 
 from functools import lru_cache
+from pathlib import Path
 from typing import Literal
 
 from pydantic import model_validator
@@ -26,14 +27,19 @@ class Settings(BaseSettings):
     downstream_token_ttl_s: int = 60
     analyst_token_ttl_s: int = 8 * 3600
 
+    # Operator access to management endpoints until analyst login lands (M10).
+    # Required in prod; optional in dev/test.
+    admin_api_key: str | None = None
+
     # Agents
     agent_mode: Literal["llm", "replay"] = "replay"
+    roles_dir: Path = Path(__file__).resolve().parents[2] / "roles"  # backend/roles
 
     # Free LLM providers (all optional; the router skips any without a key/url)
     groq_api_key: str | None = None
-    groq_model: str = "llama-3.3-70b-versatile"
+    groq_model: str = "openai/gpt-oss-120b"  # verified: chat + tool calling
     gemini_api_key: str | None = None
-    gemini_model: str = "gemini-2.5-flash"
+    gemini_model: str = "gemini-3.5-flash-lite"  # verified: chat + tool calling
     openrouter_api_key: str | None = None
     openrouter_models: str = ""  # comma-separated free model ids
     ollama_url: str | None = None
@@ -55,9 +61,9 @@ class Settings(BaseSettings):
         return [o.strip() for o in self.cors_origins.split(",") if o.strip()]
 
     @model_validator(mode="after")
-    def _no_dev_key_in_prod(self) -> "Settings":
-        if self.env == "prod" and self.jwt_signing_key == DEV_JWT_KEY:
-            raise ValueError("JWT_SIGNING_KEY must be set in production")
+    def _strong_key_in_prod(self) -> "Settings":
+        if self.env == "prod" and (self.jwt_signing_key == DEV_JWT_KEY or len(self.jwt_signing_key) < 32):
+            raise ValueError("JWT_SIGNING_KEY must be a random value of at least 32 characters in production")
         return self
 
 

@@ -161,6 +161,7 @@ class RoleAmendment(_Model):
     signer: str
     created_at: datetime = Field(default_factory=utcnow)
     expires_at: datetime | None = None
+    signature: str | None = None  # HMAC over the amendment; tampered amendments are ignored
 
 
 class Agent(_Model):

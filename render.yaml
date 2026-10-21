@@ -17,6 +17,8 @@ services:
         value: replay # switch to `llm` once an LLM key is set
       - key: JWT_SIGNING_KEY
         generateValue: true
+      - key: ADMIN_API_KEY
+        generateValue: true # copy it from the dashboard; sent as X-Admin-Key
       - key: MONGO_URI
         sync: false # Atlas mongodb+srv:// connection string
       - key: CORS_ORIGINS
