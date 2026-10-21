@@ -1,0 +1,30 @@
+# Local stack. The database defaults to MongoDB Atlas (MONGO_URI in .env).
+# Offline / no Atlas:  docker compose --profile local-db up
+#   and set MONGO_URI=mongodb://mongo:27017 in .env
+# Local LLM:           add --profile ollama and set OLLAMA_URL=http://ollama:11434
+services:
+  api:
+    build: ./backend
+    env_file: .env
+    ports:
+      - "8000:8000"
+
+  mongo:
+    image: mongo:7
+    profiles: [local-db]
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongo-data:/data/db
+
+  ollama:
+    image: ollama/ollama
+    profiles: [ollama]
+    ports:
+      - "11434:11434"
+    volumes:
+      - ollama-data:/root/.ollama
+
+volumes:
+  mongo-data:
+  ollama-data:

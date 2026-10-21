@@ -1,0 +1,33 @@
+# Render Blueprint: New → Blueprint → select this repo.
+# Secrets marked `sync: false` are entered in the Render dashboard, never in git.
+services:
+  - type: web
+    name: threatlens-api
+    runtime: docker
+    plan: free
+    region: singapore # keep the same region as your MongoDB Atlas cluster
+    dockerfilePath: ./backend/Dockerfile
+    dockerContext: ./backend
+    healthCheckPath: /v1/health
+    autoDeploy: true
+    envVars:
+      - key: ENV
+        value: prod
+      - key: AGENT_MODE
+        value: replay # switch to `llm` once an LLM key is set
+      - key: JWT_SIGNING_KEY
+        generateValue: true
+      - key: MONGO_URI
+        sync: false # Atlas mongodb+srv:// connection string
+      - key: CORS_ORIGINS
+        sync: false # https://<project>.vercel.app
+      - key: GROQ_API_KEY
+        sync: false
+      - key: GEMINI_API_KEY
+        sync: false
+      - key: OPENROUTER_API_KEY
+        sync: false
+      - key: OPENROUTER_MODELS
+        sync: false
+      - key: DISCORD_WEBHOOK_URL
+        sync: false
