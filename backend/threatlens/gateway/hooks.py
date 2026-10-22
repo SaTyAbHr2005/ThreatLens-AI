@@ -44,6 +44,8 @@ class ScoreResult:
     risk: float | None = None
     tier_floor: Tier | None = None  # raise this call's tier immediately (e.g. a tripwire)
     alert_id: str | None = None
+    floor: str | None = None  # which tripwire set the risk floor (M5)
+    tripwires: tuple[str, ...] = ()  # every tripwire that fired (M5); certain ones trigger isolation (M6)
 
 
 class ActionScorer(Protocol):

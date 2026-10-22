@@ -308,6 +308,7 @@ class Alert(_Model):
     narrative_source: str | None = None  # e.g. "llm:gemini"; None means the template headline is used
     updated_at: datetime = Field(default_factory=utcnow)
     action_count: int = 1  # alerting actions folded into this alert (one alert per agent session)
+    containment: AgentStatus | None = None  # what was actually applied (M6); `tier` is only the risk band
 
 
 class Decision(_Model):
@@ -322,3 +323,34 @@ class Decision(_Model):
     actor: str = "system"  # "system" or an analyst id
     event_id: str | None = None
     alert_id: str | None = None
+    from_status: AgentStatus | None = None
+    to_status: AgentStatus | None = None
+    details: dict[str, Any] = Field(default_factory=dict)  # e.g. revoked token count, flagged agents
+
+
+class ApprovalStatus(StrEnum):
+    pending = "pending"
+    approved = "approved"
+    denied = "denied"
+    expired = "expired"
+    failed = "failed"
+
+
+class Approval(_Model):
+    """A Step-up action held for a person to approve."""
+
+    id: str = Field(default_factory=lambda: new_id("apr"))
+    ts: datetime = Field(default_factory=utcnow)
+    expires_at: datetime
+    agent_id: str
+    session_id: str
+    event_id: str
+    tool: str
+    resource: str | None = None
+    sensitivity: Sensitivity
+    destination: str | None = None
+    reason: str
+    status: ApprovalStatus = ApprovalStatus.pending
+    decided_by: str | None = None
+    decided_at: datetime | None = None
+    result: Any = None  # the tool's result, once approved and run

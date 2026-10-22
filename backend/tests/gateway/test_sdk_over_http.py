@@ -64,10 +64,9 @@ def test_tool_failure_still_returns_the_verdict(client):
     client.app.state.gateway.connector = Broken()
     agent = _agent(client, "procurement-agent", "procurement", PROCUREMENT_GRANTS)
     r = client.post("/v1/gateway/tool-call", headers={"Authorization": f"Bearer {agent.token}"},
-                    json={"session_id": "s1", "tool": "files.read", "args": {"path": "/hr/salaries.xlsx"}})
+                    json={"session_id": "s1", "tool": "files.read", "args": {"path": "/procurement/policy.md"}})
     body = r.json()
-    # Allowed (the risky read also raises drift, so it may already be fully logged), then the tool failed.
-    assert r.status_code == 502 and body["decision"] in ("allow", "allow_logged") and body["event_id"]
+    assert r.status_code == 502 and body["decision"] == "allow" and body["event_id"]
     assert body["risk"] is not None and "tool" in body["detail"]
 
 

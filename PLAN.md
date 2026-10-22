@@ -149,7 +149,7 @@ The module definitions, interfaces, and "done when" tests are in [ARCHITECTURE.m
 - [x] M3: hidden-text PDF/HTML/email extraction, v1 decoder, Prompt Guard (Groq) + agent-directed-instruction heuristics, phishing + URL risk, Forensics Lab API
 - [x] M4: all nine signals S0–S8 (S3 as a session profile), clean-only learning, baselines persisted to Atlas
 - [x] M5: logistic fusion + tripwire floors, drift score, factors/evidence, cause attribution, **counterfactual**, template + LLM narrative, alerts API
-- [ ] M6: Allow / Monitor / Restrict / Isolate, scope snap-back, `jti` revocation, release / mark harmless / approve as change, Discord alert
+- [x] M6: contain-first policy (Restrict / Step-up, isolate on certainty or 3 strikes), same-call containment, cascading revocation, auto-relax, Step-up approvals, analyst actions + amendments, audit log, dossier + OCSF, Discord
 - [ ] M8: mock enterprise + canaries, replay agents (all 4), LLM agent (procurement), scenarios **A1, A3, A5, A7, B1, B2**
 - [ ] M9: dataset generator, eval with ablation + **attribution accuracy**, CI regression suite
 - [ ] M10: REST + WebSocket, analyst JWT login, `/metrics`, `/v1/health`
@@ -157,7 +157,7 @@ The module definitions, interfaces, and "done when" tests are in [ARCHITECTURE.m
 
 ### Stretch (in priority order)
 
-1. [ ] Step-up approvals queue (M6) + Approvals page
+1. [ ] Approvals page in the Console (the M6 queue and API are done)
 2. [ ] Delegation + A4 chain hijack (M1/M4 S6)
 3. [ ] Content Forensics Lab with the UV lamp (M3 + M11)
 4. [ ] LLM Susceptibility Arena (M7)

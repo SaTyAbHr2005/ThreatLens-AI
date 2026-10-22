@@ -64,6 +64,7 @@ class Settings(BaseSettings):
     discord_webhook_url: str | None = None
     resend_api_key: str | None = None
     cors_origins: str = "http://localhost:5173"
+    console_url: str = "http://localhost:5173"  # links in Discord alerts point here (the Vercel URL in prod)
     fail_mode_sensitive: Literal["closed", "open"] = "closed"
 
     @property

@@ -64,6 +64,7 @@ class Fused:
     model_risk: float  # before floors
     contributions: dict[str, float]  # logit contribution per factor (incl. the interaction)
     floor: str | None  # which tripwire set the floor, if any
+    tripwires: tuple[str, ...] = ()  # every tripwire that fired, even if the model score was already higher
 
     @property
     def tier(self) -> Tier:
@@ -97,7 +98,7 @@ def fuse(signals: list[SignalScore], w: Weights) -> Fused:
     floor_value, floor_name = max(floors, default=(0.0, None))
     risk = max(model_risk, floor_value)
     return Fused(round(risk, 2), round(model_risk, 2), contributions,
-                 floor_name if floor_value > model_risk else None)
+                 floor_name if floor_value > model_risk else None, tuple(name for _, name in floors))
 
 
 def without(signals: list[SignalScore], *drop: str) -> list[SignalScore]:

@@ -24,6 +24,8 @@ from threatlens.gateway import Catalog, Gateway, HttpToolConnector, Unconfigured
 from threatlens.gateway.router import router as gateway_router
 from threatlens.identity import MemoryRegistryStore, MongoRegistryStore, Registry
 from threatlens.identity.router import router as identity_router
+from threatlens.response import DiscordNotifier, MemoryDecisionStore, MongoDecisionStore, ResponseOrchestrator
+from threatlens.response.router import router as response_router
 from threatlens.scanner import ContentForensics, PromptGuard
 from threatlens.scanner.router import router as forensics_router
 
@@ -71,16 +73,29 @@ async def lifespan(app: FastAPI):
         weights=Weights.load(settings.fusion_weights_path), llm=app.state.llm,
     )
 
+    app.state.response = ResponseOrchestrator(
+        app.state.fusion, app.state.registry,
+        MongoDecisionStore(app.state.db) if persist else MemoryDecisionStore(),
+    )
+
     connector = HttpToolConnector(settings.tools_base_url) if settings.tools_base_url else UnconfiguredConnector()
     app.state.gateway = Gateway(
         app.state.registry, catalog, connector,
-        scanner=app.state.forensics, scorer=app.state.fusion, settings=settings,
+        scanner=app.state.forensics, scorer=app.state.response, settings=settings,
     )
+    app.state.gateway.approvals = app.state.response.approvals
+    app.state.response.gateway = app.state.gateway
+
     unsubscribe = attach_mongo_sinks(bus, app.state.db) if persist else []
     unsubscribe.append(bus.subscribe(Topics.action_scored, app.state.detector.observe))
     unsubscribe += app.state.fusion.attach(bus)
+    unsubscribe += app.state.response.attach(bus)
     if persist:
         unsubscribe.append(attach_minute_sink(bus, app.state.db, app.state.registry))
+    notifier = DiscordNotifier(settings.discord_webhook_url, console_url=settings.console_url) \
+        if settings.discord_webhook_url else None
+    if notifier:
+        unsubscribe.append(bus.subscribe(Topics.containment_changed, notifier.on_decision))
     saver = asyncio.create_task(persist_periodically(app.state.db, baselines)) if db_ok else None
     yield
     await bus.drain()
@@ -90,6 +105,8 @@ async def lifespan(app: FastAPI):
         saver.cancel()
         if baselines.dirty:
             await save_baselines(app.state.db, baselines)
+    if notifier:
+        await notifier.aclose()
     await connector.aclose()
     await app.state.forensics.aclose()
     await app.state.llm.aclose()
@@ -109,6 +126,7 @@ app.include_router(identity_router)
 app.include_router(gateway_router)
 app.include_router(forensics_router)
 app.include_router(alerts_router)
+app.include_router(response_router)
 
 
 @app.get("/v1/health")
@@ -127,6 +145,8 @@ async def health() -> dict:
         "content_scanner": "prompt_guard+heuristics" if app.state.forensics.prompt_guard else "heuristics",
         "embedder": app.state.detector.embedder.name,
         "fusion_weights": app.state.fusion.weights.source,
+        "pending_approvals": len([a for a in app.state.response.approvals.list() if a.status.value == "pending"]),
+        "notifications": "discord" if settings.discord_webhook_url else "off",
         "baselines": {"agents": len(app.state.detector.store.agents), "roles": len(app.state.detector.store.roles)},
         "llm": app.state.llm.status(),
     }

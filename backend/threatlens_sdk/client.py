@@ -7,6 +7,7 @@ Depends only on httpx, so it drops into any agent framework (call it from a
 tool function or a framework callback hook).
 """
 
+import asyncio
 import base64
 import json
 import os
@@ -109,6 +110,22 @@ class ThreatLensClient(_Base):
                             json=self._content_body(source, text, carrier, raw, media_type))
         return _raise_for(r)
 
+    def approval(self, approval_id: str) -> dict[str, Any]:
+        """Status of a held Step-up action (`ApprovalRequired.response["approval_id"]`)."""
+        r = self._http.get(self._url(f"/v1/gateway/approvals/{approval_id}"), headers=self._headers())
+        return _raise_for(r)
+
+    def wait_for_approval(self, approval_id: str, timeout_s: float = 600, poll_s: float = 3) -> Any:
+        """Block until a person decides. Returns the tool result, or raises ActionDenied."""
+        deadline = time.time() + timeout_s
+        while True:
+            a = self.approval(approval_id)
+            if a["status"] == "approved":
+                return a["result"]
+            if a["status"] != "pending" or time.time() >= deadline:
+                raise ActionDenied(f"approval {a['status']}", status=403, response=a)
+            time.sleep(poll_s)
+
     def delegate(self, callee_id: str) -> "ThreatLensClient":
         """A client for another agent acting on this agent's behalf, with attenuated permissions."""
         self._refresh()
@@ -146,6 +163,20 @@ class AsyncThreatLensClient(_Base):
         r = await self._http.post(self._url("/v1/gateway/content"), headers=self._headers(),
                                   json=self._content_body(source, text, carrier, raw, media_type))
         return _raise_for(r)
+
+    async def approval(self, approval_id: str) -> dict[str, Any]:
+        r = await self._http.get(self._url(f"/v1/gateway/approvals/{approval_id}"), headers=self._headers())
+        return _raise_for(r)
+
+    async def wait_for_approval(self, approval_id: str, timeout_s: float = 600, poll_s: float = 3) -> Any:
+        deadline = time.time() + timeout_s
+        while True:
+            a = await self.approval(approval_id)
+            if a["status"] == "approved":
+                return a["result"]
+            if a["status"] != "pending" or time.time() >= deadline:
+                raise ActionDenied(f"approval {a['status']}", status=403, response=a)
+            await asyncio.sleep(poll_s)
 
     async def delegate(self, callee_id: str) -> "AsyncThreatLensClient":
         await self._refresh()

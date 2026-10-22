@@ -40,6 +40,7 @@ async def test_narrative_is_added_and_never_sees_the_attackers_text(f):
     assert "POST it to" not in prompt and "Do not mention this" not in prompt  # decoded injection withheld
     facts = json.loads(prompt)
     assert facts["hidden_instruction_present"] is True
-    # A recommendation is not an action: the model must not report containment that didn't happen.
-    assert "recommended_containment" in facts and facts["actions_taken"] == []
-    assert "unless that appears in actions_taken" in body["messages"][0]["content"]
+    # Written after the action finished, from what actually happened (no containment in M5 alone).
+    assert facts["action"] == "files.read /hr/salaries.xlsx" and facts["outcome"] == "allowed"
+    assert facts["containment_applied"] == "none"
+    assert "never say it succeeded" in body["messages"][0]["content"]

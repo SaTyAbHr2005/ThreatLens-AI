@@ -29,8 +29,10 @@ def test_tripwire_floors():
     assert fuse(sig(S0=1.0), W).risk == 75
     tripped = fuse(sig(S5=0.6, details={"S5": {"tripwire": "sensitive_then_egress"}}), W)
     assert tripped.risk == 85 and tripped.floor == "sensitive_then_egress"
-    # A floor never lowers a risk the model already put higher.
-    assert fuse(sig(S8=1.0, S1=1.0, S4=0.9, S5=1.0), W).floor is None
+    # A floor never lowers a risk the model already put higher, but the tripwire still counts:
+    # containment (M6) isolates on a canary however the score was reached.
+    dominated = fuse(sig(S8=1.0, S1=1.0, S4=0.9, S5=1.0), W)
+    assert dominated.floor is None and dominated.tripwires == ("canary",)
 
 
 def test_contributions_are_exact_and_include_the_interaction():

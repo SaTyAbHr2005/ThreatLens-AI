@@ -52,7 +52,8 @@ class FusionScorer:
         alert_id = None
         if fused.risk >= ALERT_THRESHOLD:
             alert_id = self._raise_or_update(ctx, event, detected.signals, fused).id
-        return ScoreResult(scores=detected.scores, signals=detected.signals, risk=fused.risk, alert_id=alert_id)
+        return ScoreResult(scores=detected.scores, signals=detected.signals, risk=fused.risk, alert_id=alert_id,
+                           floor=fused.floor, tripwires=fused.tripwires)
 
     def _raise_or_update(self, ctx, event, signals, fused) -> Alert:
         key = (event.agent_id, event.session_id)
@@ -101,32 +102,13 @@ class FusionScorer:
 
     async def _on_raised(self, alert: Alert) -> None:
         await self.alerts.save(alert)
-        await self._narrate(alert)
 
     async def _on_updated(self, alert: Alert) -> None:
         await self.alerts.save(alert)
-        narrated = self._narrated.get(alert.id)
-        if narrated is not None and TIER_ORDER.index(alert.tier) > TIER_ORDER.index(narrated):
-            await self._narrate(alert)  # escalated: the old summary undersells it
-
-    async def _narrate(self, alert: Alert) -> None:
-        self._narrated[alert.id] = alert.tier
-        try:
-            role = self.registry.agent(alert.agent_id).role
-        except UnknownAgent:
-            role = ""
-        text, source = await write_narrative(self.llm, alert, role)
-        if not text:
-            return
-        live = next((a for a in self._open.values() if a.id == alert.id), None)
-        target = live or alert
-        target.narrative, target.narrative_source = text, source
-        await self.alerts.save(target)
-        if self.bus:
-            self.bus.publish(Topics.alert_updated, target.model_copy(deep=True))
 
     async def _on_action(self, event: ActionEvent) -> None:
-        """Persist an agent's drift when it has moved enough to matter."""
+        """After the action finished: persist drift, and write the alert's narrative now that
+        the outcome (allowed / blocked / held) and the containment applied are known."""
         agent_id = event.agent_id
         try:
             agent = self.registry.agent(agent_id)
@@ -136,13 +118,41 @@ class FusionScorer:
             self._persisted_drift[agent_id] = agent.drift
             await self.registry.set_status(agent_id, agent.status, agent.drift)
 
+        alert = self.live_alert(event.alert_id) if event.alert_id else None
+        if alert is None:
+            return
+        stage = (TIER_ORDER.index(alert.tier), alert.containment.value if alert.containment else "")
+        if self._narrated.get(alert.id) != stage:  # first time, or the situation escalated
+            self._narrated[alert.id] = stage
+            await self._narrate(alert, agent.role, event)
+
+    async def _narrate(self, alert: Alert, role: str, event: ActionEvent) -> None:
+        text, source = await write_narrative(self.llm, alert, role, event)
+        if not text:
+            return
+        alert.narrative, alert.narrative_source = text, source
+        await self.save_alert(alert)
+
     # ------------------------------------------------------------ used by M6 and the API
 
     def open_alert(self, agent_id: str, session_id: str) -> Alert | None:
         return self._open.get((agent_id, session_id))
 
+    def live_alert(self, alert_id: str) -> Alert | None:
+        return next((a for a in self._open.values() if a.id == alert_id), None)
+
+    async def save_alert(self, alert: Alert) -> None:
+        """Persist an alert changed outside scoring (containment notes, analyst feedback)."""
+        alert.updated_at = utcnow()
+        for key, a in list(self._open.items()):
+            if a.id == alert.id:
+                self._open[key] = alert
+        await self.alerts.save(alert)
+        if self.bus:
+            self.bus.publish(Topics.alert_updated, alert.model_copy(deep=True))
+
     def reset_agent(self, agent_id: str) -> None:
-        """An analyst released the agent or marked its alert harmless."""
+        """An analyst released the agent: its drift starts over and new alerts start fresh."""
         self.drift.reset(agent_id)
         for key in [k for k in self._open if k[0] == agent_id]:
             self._open.pop(key)

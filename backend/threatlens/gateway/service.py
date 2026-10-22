@@ -55,6 +55,7 @@ class GatewayResult(BaseModel):
     risk: float | None = None
     result: Any = None
     content_id: str | None = None  # set when the tool's output was registered as untrusted content
+    approval_id: str | None = None  # Step-up: the held action, decided by a person (M6)
 
 
 class ToolCallFailed(Exception):
@@ -104,6 +105,7 @@ class Gateway:
         self.sessions = sessions or SessionStore()
         self.settings = settings or get_settings()
         self.bus = bus or default_bus
+        self.approvals = None  # M6 ApprovalQueue: holds Step-up actions for a person to decide
 
     async def tool_call(
         self, token: str, session_id: str, tool: str, args: dict[str, Any], runtime: RuntimeFingerprint
@@ -168,6 +170,8 @@ class Gateway:
         result = self._finish(
             event, session, tier, decision, shadow=contract.enforcement_mode is EnforcementMode.shadow
         )
+        if result.decision is DecisionType.require_approval and self.approvals is not None:
+            result.approval_id = self.approvals.hold(event, claims, args, resolved, decision.reason).id
         try:
             if result.decision in (DecisionType.allow, DecisionType.allow_logged):
                 downstream = issue_downstream(claims, tool, resolved.resource, event.id, self.settings)
@@ -199,6 +203,38 @@ class Gateway:
             raise BadToolArgs(f"content is larger than {MAX_CONTENT_CHARS} characters")
         session = self.sessions.get(claims.agent_id, session_id)
         return await self._register(session, source, carrier, text, raw, media_type)
+
+    async def execute_held(self, claims, session_id: str, tool: str, args: dict[str, Any], *, approved_by: str) -> Any:
+        """Run a Step-up action a person approved. Recorded as its own audited event."""
+        agent = self.registry.agent(claims.agent_id)
+        if agent.status is AgentStatus.quarantined:
+            raise PermissionError("the agent was isolated while the action waited for approval")
+        resolved = self.catalog.resolve(tool, args)
+        session = self.sessions.get(agent.agent_id, session_id)
+        event = ActionEvent(
+            agent_id=agent.agent_id, role=agent.role, role_version=self.registry.contract(agent.role).version,
+            session_id=session_id, token_jti=claims.jti,
+            delegation=DelegationContext(parent=claims.chain[-2] if claims.depth else None,
+                                         chain=claims.chain, depth=claims.depth),
+            action=resolved.to_action(args), provenance=session.provenance(),
+            decision=DecisionType.allow_logged, rule="approved", reason=f"Approved by {approved_by}.",
+        )
+        session.record(event)
+        result = GatewayResult(event_id=event.id, decision=DecisionType.allow_logged, tier=Tier.step_up,
+                               rule="approved", reason=event.reason)
+        try:
+            try:
+                out = await self.connector.call(tool, args, issue_downstream(claims, tool, resolved.resource,
+                                                                             event.id, self.settings))
+            except ToolError as e:
+                raise ToolCallFailed(result, e) from e
+            event.action.bytes_in = out.bytes
+            if resolved.untrusted_output and (out.text or out.raw_b64):
+                await self._register(session, resolved.resource, resolved.spec.carrier, out.text or "",
+                                     _b64(out.raw_b64), out.media_type)
+            return out.data
+        finally:
+            self.bus.publish(Topics.action_scored, event)
 
     # ------------------------------------------------------------ internals
 

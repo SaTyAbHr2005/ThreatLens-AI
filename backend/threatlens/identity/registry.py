@@ -249,6 +249,15 @@ class Registry:
             await self.revoke(t.jti, t.expires_at)
         return [t.jti for t in doomed]
 
+    def downstream_agents(self, agent_id: str) -> set[str]:
+        """Agents currently acting on this agent's behalf (live delegated tokens)."""
+        self._prune()
+        out: set[str] = set()
+        for t in self._live.values():
+            if agent_id in t.chain[:-1]:
+                out.update(t.chain[t.chain.index(agent_id) + 1:])
+        return out
+
     # ------------------------------------------------------------ delegation
 
     def delegate(self, caller: AgentToken, callee_id: str) -> IssuedToken:
@@ -257,6 +266,9 @@ class Registry:
         Effective scopes = caller scopes ∩ callee's role tools, so authority can
         only shrink along a chain.
         """
+        caller_agent = self.agent(caller.agent_id)
+        if caller_agent.status is not AgentStatus.active:
+            raise DelegationDenied(f"{caller.agent_id} is contained ({caller_agent.status.value}); delegation is off")
         callee = self.agent(callee_id)
         if callee.status is AgentStatus.quarantined:
             raise AgentQuarantined(callee_id)

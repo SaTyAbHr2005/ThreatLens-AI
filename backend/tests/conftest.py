@@ -13,4 +13,6 @@ os.environ.update(
     ADMIN_API_KEY="",
     JWT_SIGNING_KEY="unit-test-signing-key-0123456789-abcdefgh",
     EMBEDDING_BACKEND="hashing",  # no model download in unit tests
+    DISCORD_WEBHOOK_URL="",  # never post test alerts to a real channel
+    RESEND_API_KEY="",
 )

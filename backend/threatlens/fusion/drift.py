@@ -35,6 +35,13 @@ class DriftTracker:
         st = self._agents.get(agent_id)
         return st.value if st else 0.0
 
+    def bump(self, agent_id: str, floor: float) -> float:
+        """Raise an agent's drift to at least `floor` (e.g. it acted for an agent that was just isolated)."""
+        st = self._agents.setdefault(agent_id, DriftState())
+        st.peak = max(st.peak, floor)
+        st.value = max(st.value, floor)
+        return st.value
+
     def reset(self, agent_id: str) -> None:
         """Analyst released the agent or marked the alert harmless (M6)."""
         self._agents.pop(agent_id, None)
