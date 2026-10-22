@@ -33,7 +33,7 @@ Existing tools see **either** the malicious content (prompt filters) **or** the 
 
 | Pillar | What it does | What you see |
 |--------|--------------|--------------|
-| **Causal Drift Attribution** | Ties every behavior change to the document, email, or tool output that caused it. Decodes the hidden instruction and shows a counterfactual. | *"Caused by supplier_quote.pdf. Hidden instruction decoded. Without it, this action would score 77 instead of 100."* |
+| **Causal Drift Attribution** | Ties every behavior change to the document, email, or tool output that caused it. Decodes the hidden instruction and shows a counterfactual. | *"Caused by supplier_quote.pdf. Hidden instruction decoded. Without it, this action would score 89 instead of 100."* (The figure depends on how much normal history the role has built up.) |
 | **Day-zero, role-anchored detection** | Compares behavior with the agent's declared **Role Contract**, so new and short-lived agents are protected from their first action. Approved changes don't raise alerts. | A brand-new agent stays green. A hijacked one is caught on its 2nd off-role action. |
 | **Contain, don't kill** | Graduated containment removes only what's outside the role. In-role work keeps running. | 0 bytes reach the attacker, and the agent still creates purchase requests. |
 

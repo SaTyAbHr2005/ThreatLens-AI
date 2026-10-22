@@ -174,7 +174,7 @@ export default function Landing() {
                   <p className="verdict void">Blocked · risk 99.8 of 100</p>
                 </div>
               </div>
-              <p className="aside">Without the PDF, this read would score 77 instead of 100. The alert names the PDF as the cause.</p>
+              <p className="aside">Take the PDF away and the same read scores well below 100: the PDF is what tipped it over. The alert names it as the cause.</p>
             </article>
 
             <article className="step step-4">
