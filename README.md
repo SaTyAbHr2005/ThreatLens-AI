@@ -243,7 +243,8 @@ Free tiers sleep when idle and have memory and rate limits. See [ARCHITECTURE.md
 | `MONGO_URI` | MongoDB connection string |
 | `JWT_SIGNING_KEY` | Signs agent, downstream, and analyst tokens, and Role Contract versions |
 | `ADMIN_API_KEY` | Sent as `X-Admin-Key` by scripts and CI for operator routes (analysts use the console login instead). Required in production. Optional locally. |
-| `DEMO_ANALYST_EMAIL` · `DEMO_ANALYST_PASSWORD` | The demo console account, created at startup. Set them in the Render dashboard and share them in the submission form, never in git. |
+| `DEMO_ANALYST_EMAIL` · `DEMO_ANALYST_PASSWORD` | The demo console account, created at startup. Set them in the Render dashboard, never in git. |
+| `DEMO_ANALYST_PUBLIC` | `true` shows the demo account on the sign-in page with a *Fill in for me* button, for online evaluation. Visitors share it, so it locks out per IP and skips the usual-device and usual-hour checks; the slider CAPTCHA still applies. Default `false`. |
 | `RATE_LIMIT_PER_MIN` · `AUTH_RATE_LIMIT_PER_MIN` | Requests per minute per credential (default 600) and per IP on login (default 20) |
 | `AGENT_MODE` | `llm` or `replay` |
 | `GROQ_API_KEY` · `GEMINI_API_KEY` · `OPENROUTER_API_KEY` | Free LLM providers (all optional) |

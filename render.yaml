@@ -39,3 +39,5 @@ services:
         sync: false # the demo console account (share it in the submission form, not in git)
       - key: DEMO_ANALYST_PASSWORD
         sync: false
+      - key: DEMO_ANALYST_PUBLIC
+        value: "true" # show the demo account on the sign-in page for online evaluation

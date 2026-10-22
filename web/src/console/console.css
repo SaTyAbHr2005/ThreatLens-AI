@@ -1545,6 +1545,30 @@
   background: #7fd4b4;
 }
 
+.login-demo {
+  padding: 12px 14px;
+  border: 1px dashed var(--foil);
+  border-radius: var(--r-ctl);
+  background: var(--intaglio-raised);
+}
+
+.login-demo dl {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 4px 12px;
+  margin: 0 0 10px;
+}
+
+.login-demo dt {
+  color: var(--guilloche);
+}
+
+.login-demo dd {
+  margin: 0;
+  overflow-wrap: anywhere;
+  user-select: all;
+}
+
 .login-error {
   padding: 10px 14px;
   border-left: 3px solid var(--void-on-dark);

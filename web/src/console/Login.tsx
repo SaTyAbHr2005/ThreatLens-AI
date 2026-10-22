@@ -25,6 +25,7 @@ export default function Login() {
   const [trail, setTrail] = useState<Point[] | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<{ title: string; detail?: string[] } | null>(null);
+  const [demo, setDemo] = useState<{ email: string; password: string } | null>(null);
 
   const fresh = useCallback(() => {
     setTrail(null);
@@ -33,6 +34,8 @@ export default function Login() {
       .catch((e: ApiError) => setError({ title: e.message }));
   }, []);
   useEffect(fresh, [fresh]);
+  // Online evaluation: the API shares the demo account only when DEMO_ANALYST_PUBLIC is on.
+  useEffect(() => { api<{ email: string; password: string }>('/v1/auth/demo').then(setDemo).catch(() => {}); }, []);
 
   // The login seal engraves itself once: the console's arrival moment.
   useGSAP(() => {
@@ -75,6 +78,18 @@ export default function Login() {
       <form className="login-card" onSubmit={submit}>
         <h1>Analyst sign-in</h1>
         <p className="muted">ThreatLens protects the people who protect the agents. A password alone doesn’t get in.</p>
+        {demo && (
+          <div className="login-demo">
+            <p className="field-label">Evaluating ThreatLens? Use the demo account</p>
+            <dl className="mrz">
+              <dt>Email</dt><dd>{demo.email}</dd>
+              <dt>Password</dt><dd>{demo.password}</dd>
+            </dl>
+            <button type="button" className="btn" onClick={() => { setEmail(demo.email); setPassword(demo.password); }}>
+              Fill in for me
+            </button>
+          </div>
+        )}
         <label>Email<input type="email" autoComplete="username" required value={email} onChange={(e) => setEmail(e.target.value)} /></label>
         <label>Password<input type="password" autoComplete="current-password" required value={password} onChange={(e) => setPassword(e.target.value)} /></label>
         <div>

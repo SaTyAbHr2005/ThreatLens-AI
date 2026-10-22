@@ -34,6 +34,8 @@ class Settings(BaseSettings):
     # Console analysts (M10). The demo account is created at startup if both are set.
     demo_analyst_email: str | None = None
     demo_analyst_password: str | None = None
+    # Show the demo account on the sign-in page, for online evaluation. Anyone can then sign in as it.
+    demo_analyst_public: bool = False
     # Rate limits per minute: per credential (or IP) for the API, per IP for login.
     rate_limit_per_min: int = 600
     auth_rate_limit_per_min: int = 20

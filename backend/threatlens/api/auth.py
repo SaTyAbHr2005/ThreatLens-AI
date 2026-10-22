@@ -136,14 +136,19 @@ class AuthService:
                                           devices=existing.devices if existing else [],
                                           login_hours=existing.login_hours if existing else []))
 
-    def _recent_failures(self, email: str) -> int:
-        q, cutoff = self._failures[email], time.time() - LOCKOUT_WINDOW_S
+    def shared(self, email: str) -> bool:
+        """The public demo account: many people, devices and time zones share it."""
+        s = self.settings
+        return bool(s.demo_analyst_public and s.demo_analyst_email and email == s.demo_analyst_email.lower())
+
+    def _recent_failures(self, key: str) -> int:
+        q, cutoff = self._failures[key], time.time() - LOCKOUT_WINDOW_S
         while q and q[0] < cutoff:
             q.popleft()
         return len(q)
 
-    async def _fail(self, email: str, record: dict, status: int, detail) -> HTTPException:
-        self._failures[email].append(time.time())
+    async def _fail(self, key: str, record: dict, status: int, detail) -> HTTPException:
+        self._failures[key].append(time.time())
         await self.store.log({**record, "ok": False, "reason": detail if isinstance(detail, str) else detail["reason"]})
         return HTTPException(status, detail)
 
@@ -151,30 +156,34 @@ class AuthService:
         email = body.email.lower()
         now = utcnow()
         record = {"ts": now, "email": email, "ip": ip, "device": _device(body.device_id, user_agent)}
-        failures = self._recent_failures(email)
+        shared = self.shared(email)
+        # A shared account locks out per address, so one visitor's failures don't lock out everyone else.
+        key = f"{email}|{ip}" if shared else email
+        failures = self._recent_failures(key)
         if failures >= LOCKOUT_FAILURES:
             await self.store.log({**record, "ok": False, "reason": "locked"})
             raise HTTPException(429, "too many failed attempts; try again in 15 minutes")
 
         cap = self.captcha.verify(body.captcha)
         if not cap.ok:
-            raise await self._fail(email, record, 400, f"CAPTCHA failed: {cap.reason}")
+            raise await self._fail(key, record, 400, f"CAPTCHA failed: {cap.reason}")
 
         a = self.store.get(email)
         # Same work whether or not the account exists, so timing doesn't reveal which emails are real.
         if not verify_password(a.password_hash if a else _DUMMY_HASH, body.password) or a is None:
-            raise await self._fail(email, record, 401, "invalid email or password")
+            raise await self._fail(key, record, 401, "invalid email or password")
 
+        # A shared account has no usual device or hour; the CAPTCHA and failure features still apply.
         risk = self.model.assess({
-            "hour_shift": _hour_shift(a.login_hours, now.hour),
-            "new_device": float(bool(a.devices) and record["device"] not in a.devices),
+            "hour_shift": 0.0 if shared else _hour_shift(a.login_hours, now.hour),
+            "new_device": float(not shared and bool(a.devices) and record["device"] not in a.devices),
             "failures": float(failures),
             "solve_log_ms": math.log10(max(cap.solve_ms, 1.0)),
             "speed_cv": cap.speed_cv,
         })
         record["risk"] = {"score": risk.score, "threshold": risk.threshold, "features": risk.features}
         if risk.anomalous:
-            raise await self._fail(email, record, 403, {
+            raise await self._fail(key, record, 403, {
                 "reason": "login blocked as anomalous", "reasons": risk.reasons,
                 "score": risk.score, "threshold": risk.threshold})
 
@@ -182,7 +191,7 @@ class AuthService:
             a.devices = (a.devices + [record["device"]])[-20:]
         a.login_hours = (a.login_hours + [now.hour])[-HISTORY:]
         await self.store.save(a)
-        self._failures.pop(email, None)
+        self._failures.pop(key, None)
         await self.store.log({**record, "ok": True, "reason": "ok"})
         token, claims = issue_token(email, AUD_CONSOLE, self.settings.analyst_token_ttl_s,
                                     {"name": a.name, "role": "analyst"}, self.settings)
@@ -203,6 +212,16 @@ def _auth(request: Request) -> AuthService:
 def captcha(svc: AuthService = Depends(_auth)):
     """A single-use slider challenge (valid two minutes)."""
     return svc.captcha.challenge()
+
+
+@router.get("/demo")
+def demo(svc: AuthService = Depends(_auth)):
+    """The demo account's sign-in, only when DEMO_ANALYST_PUBLIC is on (for online evaluation)."""
+    s = svc.settings
+    if not (s.demo_analyst_public and s.demo_analyst_email and s.demo_analyst_password
+            and svc.store.get(s.demo_analyst_email)):
+        raise HTTPException(404, "no public demo account")
+    return {"email": s.demo_analyst_email, "password": s.demo_analyst_password}
 
 
 @router.post("/login")

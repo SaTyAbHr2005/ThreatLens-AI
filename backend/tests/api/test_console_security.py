@@ -1,6 +1,7 @@
 """M10: Slider CAPTCHA, login anomaly, analyst login, stream, replay, metrics, rate limits."""
 
 import math
+import time
 
 import pytest
 from fastapi import FastAPI
@@ -8,11 +9,13 @@ from fastapi.testclient import TestClient
 from starlette.websockets import WebSocketDisconnect
 
 from threatlens.api.anomaly import LoginAnomalyModel
+from threatlens.api.auth import Analyst
 from threatlens.api.captcha import CaptchaAnswer, CaptchaVerifier, Point
 from threatlens.api.main import app
 from threatlens.api.ratelimit import RateLimiter
 from threatlens.core.config import Settings
 from threatlens.core.schemas import utcnow
+from threatlens.core.security import hash_password
 
 S = Settings(env="test", jwt_signing_key="console-test-signing-key-0123456789-abcd")
 EMAIL, PASSWORD = "analyst@corp.example", "correct horse battery staple"
@@ -109,6 +112,31 @@ def test_anomalous_login_is_blocked(client):
     r = login(client, device="brand-new-device-9")
     assert r.status_code == 403
     assert "a device this account has never used" in r.json()["detail"]["reasons"]
+
+
+def test_public_demo_account(client):
+    svc = client.app.state.auth
+    assert client.get("/v1/auth/demo").status_code == 404  # hidden unless switched on
+    demo, pw = "judge@demo.example", "a demo password for judges"
+    old = svc.settings
+    svc.settings = old.model_copy(update={"demo_analyst_email": demo, "demo_analyst_password": pw,
+                                          "demo_analyst_public": True})
+    try:
+        svc.store._by_email[demo] = Analyst(email=demo, name="Demo analyst", password_hash=hash_password(pw))
+        assert client.get("/v1/auth/demo").json() == {"email": demo, "password": pw}
+        # Visitors share it: a usual hour and device from someone else must not block a new one.
+        a = svc.store.get(demo)
+        a.login_hours, a.devices = [(utcnow().hour + 10) % 24] * 10, ["known-device-hash"]
+        ch = client.post("/v1/auth/captcha").json()
+        r = client.post("/v1/auth/login", json={"email": demo, "password": pw, "device_id": "judge-device-2",
+                                                "captcha": {"token": ch["token"], "trajectory": human(ch["target"])}})
+        assert r.status_code == 200, r.text
+        # Failures lock out per address, not the whole shared account.
+        for _ in range(5):
+            svc._failures[f"{demo}|203.0.113.9"].append(time.time())
+        assert svc._recent_failures(f"{demo}|testclient") == 0
+    finally:
+        svc.settings = old
 
 
 def test_scripted_captcha_blocks_login(client):
