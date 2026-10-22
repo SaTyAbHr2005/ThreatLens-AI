@@ -147,7 +147,7 @@ The module definitions, interfaces, and "done when" tests are in [ARCHITECTURE.m
 - [ ] M1: 4 Role Contracts (procurement, HR, finance, support), tokens, amendments, `enforcement_mode`
 - [ ] M2: gateway, SDK, **downstream token exchange (A7)**, shadow mode, fail modes
 - [x] M3: hidden-text PDF/HTML/email extraction, v1 decoder, Prompt Guard (Groq) + agent-directed-instruction heuristics, phishing + URL risk, Forensics Lab API
-- [ ] M4: S0, S1, S2, S4, S5, S7, **S8 canary**
+- [x] M4: all nine signals S0–S8 (S3 as a session profile), clean-only learning, baselines persisted to Atlas
 - [ ] M5: logistic fusion + tripwires, drift score, factors/evidence, **counterfactual**, template + LLM narrative
 - [ ] M6: Allow / Monitor / Restrict / Isolate, scope snap-back, `jti` revocation, release / mark harmless / approve as change, Discord alert
 - [ ] M8: mock enterprise + canaries, replay agents (all 4), LLM agent (procurement), scenarios **A1, A3, A5, A7, B1, B2**
@@ -163,7 +163,7 @@ The module definitions, interfaces, and "done when" tests are in [ARCHITECTURE.m
 4. [ ] LLM Susceptibility Arena (M7)
 5. [ ] Fleet immunity + Intel page (M7)
 6. [ ] Red Team Studio (M8)
-7. [ ] S3 Isolation Forest session anomaly, A2 poisoned tool, A6 mimicry
+7. [ ] A2 poisoned tool, A6 mimicry (S3 session profile is done)
 8. [ ] Forensic Replay page
 9. [ ] Slider CAPTCHA + login anomaly on the analyst console (v1 reuse)
 10. [ ] Incident Dossier PDF export, OCSF export, AI-drafted Role Contracts

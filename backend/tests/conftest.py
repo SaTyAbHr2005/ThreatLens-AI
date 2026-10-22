@@ -12,4 +12,5 @@ os.environ.update(
     OLLAMA_URL="",
     ADMIN_API_KEY="",
     JWT_SIGNING_KEY="unit-test-signing-key-0123456789-abcdefgh",
+    EMBEDDING_BACKEND="hashing",  # no model download in unit tests
 )

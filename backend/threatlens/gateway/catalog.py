@@ -36,6 +36,7 @@ class ToolSpec(BaseModel):
     egress: bool = False
     output: Literal["trusted", "untrusted", "by_label"] = "trusted"
     carrier: Carrier = "tool_output"
+    phrase: str = ""  # plain-language description (M4 compares it with the role's purpose)
 
 
 class Label(BaseModel):

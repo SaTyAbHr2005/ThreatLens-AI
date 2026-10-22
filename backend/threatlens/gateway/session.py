@@ -20,6 +20,7 @@ class Taint:
     injection_score: float
     step: int
     techniques: list[str]
+    source: str = ""
 
 
 @dataclass
@@ -59,7 +60,7 @@ class SessionState:
         self.last_seen = time.monotonic()
 
     def taint(self, item: ContentItem) -> None:
-        self.taints.append(Taint(item.id, item.injection_score, self.step, list(item.techniques)))
+        self.taints.append(Taint(item.id, item.injection_score, self.step, list(item.techniques), item.source))
         self.last_seen = time.monotonic()
 
 

@@ -106,7 +106,7 @@ The design language comes from **security documents**. Each agent has a passport
 | Layer | Stack | Free hosting |
 |-------|-------|--------------|
 | API / gateway | FastAPI, Pydantic v2, PyMongo async, PyJWT | **Render** free web service (Docker) |
-| ML | Llama Prompt Guard 2 (Groq API), pdfminer.six, BeautifulSoup, fastembed (ONNX MiniLM), scikit-learn. No torch. | Inside the Render service |
+| ML | Llama Prompt Guard 2 (Groq API), pdfminer.six, BeautifulSoup, fastembed (ONNX MiniLM), numpy. No torch. | Inside the Render service |
 | LLMs | Router across **Groq**, **Gemini**, **OpenRouter** free models, **Ollama** | Free tiers / local |
 | Database | MongoDB | **MongoDB Atlas M0** |
 | Frontend | React, Vite, TypeScript, Tailwind v4, three.js / R3F, GSAP, Lenis, d3, cmdk | **Vercel** Hobby |

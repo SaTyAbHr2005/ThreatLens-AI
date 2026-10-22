@@ -11,7 +11,17 @@ import hashlib
 from dataclasses import dataclass, field
 from typing import Protocol
 
-from threatlens.core.schemas import ActionEvent, Agent, Carrier, ContentItem, RoleContract, SignalId, Tier, TrustLevel
+from threatlens.core.schemas import (
+    ActionEvent,
+    Agent,
+    Carrier,
+    ContentItem,
+    RoleContract,
+    SignalId,
+    SignalScore,
+    Tier,
+    TrustLevel,
+)
 from threatlens.identity import AgentToken
 
 from .catalog import ResolvedAction
@@ -30,6 +40,7 @@ class ScoringContext:
 @dataclass
 class ScoreResult:
     scores: dict[SignalId, float] = field(default_factory=dict)
+    signals: list[SignalScore] = field(default_factory=list)  # with evidence, for explanations (M5)
     risk: float | None = None
     tier_floor: Tier | None = None  # raise this call's tier immediately (e.g. a tripwire)
     alert_id: str | None = None

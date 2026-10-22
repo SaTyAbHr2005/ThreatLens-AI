@@ -41,7 +41,7 @@ The system is split into **12 modules**. Each one has a single owner, a public i
 | **M1** | Identity & Role Registry | `backend/threatlens/identity` | Agents, Role Contracts, amendments, tokens, delegation | new |
 | **M2** | Gateway & SDK | `backend/threatlens/gateway`, `backend/threatlens_sdk` | Policy Enforcement Point: intercept → score → enforce | new |
 | **M3** | Content Forensics | `backend/threatlens/scanner` | Decode hidden instructions, injection/phishing/URL scoring (ONNX, torch-free) | **ThreatLens v1** |
-| **M4** | Behavioral Detection | `backend/threatlens/detection` | Signals S0–S8 | new + v1 Isolation Forest |
+| **M4** | Behavioral Detection | `backend/threatlens/detection` | Signals S0–S8 (MiniLM role conformance, Markov, CUSUM drift, provenance) | new |
 | **M5** | Risk Fusion & Explainability | `backend/threatlens/fusion` | 0–100 risk, drift score, factors, narrative, counterfactual | **v1** fusion + explainability |
 | **M6** | Response & Containment | `backend/threatlens/response` | Tiers, PDP, scope snap-back, approvals, notifications | **v1** alerts & recommendations |
 | **M7** | Threat Intelligence Hub | `backend/threatlens/intel` | Fleet trends, injection signature feed, fleet immunity, LLM arena | **v1** threat intel + LLM comparison |
@@ -276,21 +276,32 @@ The best open injection classifier misses an indirect injection that reads like 
 
 ### M4 · Behavioral Detection: the 9 signals
 
-Each signal returns `SignalScore { signal, value ∈ [0,1], evidence: str, details: dict }`.
+Each signal returns `SignalScore { signal, value ∈ [0,1], evidence: str, details: dict }`. The code is in `backend/threatlens/detection/`, and the Detector plugs into the gateway as its `ActionScorer`.
+
+**Design rules**
+- Every signal pairs a **structural** part (exact and explainable: scope, ceiling, canary, chain) with a **learned or semantic** part.
+- Every learned part returns **0 without history**, so a brand-new agent can't trigger false alarms (B2).
+- Baselines learn **only from clean actions** (allowed, every signal < 0.5, not a shadow-mode would-be block), so an attacker can't teach the detector their behavior.
 
 | # | Signal | Question | Method | Works with zero history? |
 |---|--------|----------|--------|-------------|
-| **S0** | Runtime Fingerprint | Is this the same instance that normally uses this token? | New host/IP/SDK, same `jti` in 2 places at once, use outside schedule | ✅ |
-| **S1** | Role Conformance | Does this action fit the declared role? | Embed `tool + resource + arg summary` with **fastembed** (`all-MiniLM-L6-v2`, ONNX, no torch). `s = 1 − max cos_sim(action, role prototypes ∪ purpose)`, calibrated per role. Hard violations → 1.0. LRU cache on `(tool, resource_class)`. | ✅ |
-| **S2** | Sequence Surprise | Is this order of actions normal? | First-order Markov chain over `(tool, resource_class)`, Laplace-smoothed. `s = sigmoid(z(−log P))`. Blended with the role-cohort model by `λ = n/(n+k)`. | ✅ via cohort |
-| **S3** | Session Anomaly | Does the whole session look unusual? | **Isolation Forest (reused from v1 login anomaly)** on session vectors: action rate, distinct tools/resources, sensitivity histogram, bytes out, new destinations, hour, error rate, delegations | ✅ cohort-trained |
-| **S4** | Provenance / Taint | Was this action triggered by untrusted content? | `s = max(injection_score of taint items within last k actions) × novelty(action)` | ✅ |
-| **S5** | Sensitivity & Egress | More sensitive data? New destination? | `(label_rank − ceiling_rank)⁺/3`. Unknown destination × bytes × v1 URL reputation. **Tripwire:** sensitive read + unknown egress in one session → floor 85 | ✅ |
-| **S6** | Delegation Chain | Is authority being laundered through other agents? | `may_call`, depth, scope intersection, and whether the *root* role permits the outcome | ✅ |
-| **S7** | Slow Drift | Is behavior gradually walking away from the role? | Two-sided **CUSUM** on S1 vs the **anchor**. Jensen-Shannon divergence of the anchor vs the last-50-action distribution | after ~30 actions |
-| **S8** | **Canary Resources** *(extra)* | Did the agent touch bait no role ever needs? | Honeytoken files/records (`/hr/salaries_2026_FINAL.xlsx`, fake API keys in a "config" file, a fake vendor bank account) are planted in the mock enterprise. Any access sets S8 = 1.0 and forces a floor of 90. Near-zero false positives, so it's a strong judge talking point. | ✅ |
+| **S0** | Runtime Fingerprint | Is this the same instance that normally uses this token? | The same token used from two hosts within 5 minutes → 1.0 (stolen token, A3). A new host after ≥ 20 clean actions elsewhere → 0.6. New client software → 0.3. | ✅ (concurrency check) |
+| **S1** | Role Conformance | Does this action fit the declared role? | **Structural:** tool outside the contract → 1.0; resource outside scope or data above the ceiling → 0.8 (both → 0.9). **Semantic:** the action is described in plain language (tool phrase + resource + data class) and embedded with **fastembed `all-MiniLM-L6-v2`** (ONNX, no torch). It's compared with the role's purpose, prototypes, and every allowed tool × scope phrase. Calibrated per role by leave-one-out similarity (`t_in`). Explicitly in-scope actions get only 30% of the semantic score. | ✅ |
+| **S2** | Sequence Surprise | Is this order of actions normal? | Markov chain over `tool:resource_class`. Score = (1 − P(next)/P(most likely next)) × confidence. The agent's own model blends with the role cohort's by `λ = n/(n+50)`. | ✅ (0 until there's evidence) |
+| **S3** | Session Profile | Does the whole session look unusual? | Robust z-scores of session features (distinct tools and data classes, max sensitivity, external sends, denials, KB sent out) against the role cohort at the same point in a session (actions 5/10/20/40). Needs ≥ 20 cohort sessions. *(Replaces the planned Isolation Forest: same job, explainable, and no scikit-learn in 512 MB.)* | after 20 cohort sessions |
+| **S4** | Provenance / Taint | Was this action triggered by untrusted content? | `max(injection score × recency of taint in the last 10 actions) × novelty`, where novelty = max(S1, S5, S6, S8). It records **which content item** caused it, the input for causal attribution in M5. | ✅ |
+| **S5** | Sensitivity & Egress | More sensitive data? New destination? | Data above the ceiling: `(rank − ceiling)/2`. Sending to a never-seen destination: `0.6 + 0.4 × URL risk`. **Tripwire:** an unknown external send after reading above-ceiling data in the same session → 1.0. | ✅ |
+| **S6** | Delegation Chain | Is authority being laundered through other agents? | For delegated calls: a tool the *root* role never uses → 0.8; a resource outside the root role's scope or ceiling → 0.6; long chains → 0.2. | ✅ |
+| **S7** | Slow Drift | Is behavior gradually walking away from the role? | **CUSUM** of S1 against an **anchor** frozen after 30 clean actions (κ 0.05, h 1.5), plus the Jensen-Shannon divergence of the data-class mix (anchor vs. last 50). A signed amendment starts a fresh anchor. | after 30 clean actions |
+| **S8** | **Canary Resources** *(extra)* | Did the agent touch bait no role ever needs? | Labeled in `backend/catalog/labels.yaml`: `/hr/salaries_2026_FINAL.xlsx`, `/it/config/prod_api_keys.env`, `payments.ACCT-CANARY-*`. Any access → 1.0. | ✅ |
 
-**Done when:** replaying A1 offline produces S4 > 0.9 and S1 > 0.8 on the HR read, and B2 (new agent, normal work) keeps every signal < 0.3.
+**Measured** (real MiniLM, Docker, 2026-10-21/22):
+- Similarity to the procurement role: in-role `supplier_db.query` **0.89**, off-role `hr_db.query compensation` **0.28**, threshold `t_in` 0.57.
+- A container capped at 512 MB: **214 MB idle, 229 MB** after 200 scored calls, **~8 ms** per call including the client.
+
+**Baselines** persist to Atlas (`baselines` collection) every 2 minutes and at shutdown, so learning survives Render restarts.
+
+**Done when:** A1 on the HR read gives S1 ≥ 0.8, S4 ≥ 0.7 (naming `supplier_quote.pdf`), S5 ≥ 0.9, and the exfiltration attempt trips S5 = 1.0. B2 (new agent, normal work) keeps every signal < 0.3. ✅ `tests/detection/`, with both the hashing embedder and real MiniLM (`RUN_MODEL_TESTS=1`).
 
 ### M5 · Risk Fusion & Explainability (reused v1 Threat Fusion + Explainability Engine)
 
@@ -521,7 +532,7 @@ The `label` field exists only in replay/eval mode. Indexes: `events {agent_id, t
 |-------|--------|-----|
 | API / Gateway | **FastAPI**, Uvicorn, Pydantic v2, PyMongo async | Reused from v1. Async. Auto OpenAPI docs for judges |
 | Embeddings | **fastembed** (ONNX `all-MiniLM-L6-v2`) | No torch, so it fits in Render free's 512 MB RAM |
-| Classic ML | scikit-learn (Isolation Forest, Logistic Regression), XGBoost | Reused v1 models, CPU-only |
+| Classic ML | numpy (Markov, Welford statistics, CUSUM, Jensen-Shannon, logistic fusion) | Small, explainable, fits 512 MB |
 | Injection classifier | **Llama Prompt Guard 2 86M via Groq's free API**, plus heuristics | No model in RAM; works on Render's free 512 MB |
 | PDF/HTML parsing | pypdf / pdfplumber, BeautifulSoup | Hidden-text extraction |
 | LLMs | **Groq** (gpt-oss, Qwen), **Google Gemini** (Flash-Lite), **OpenRouter** free models (MiniMax, Nemotron), **Ollama** (local) | All free tiers. Router with fallback (§9) |
@@ -617,7 +628,7 @@ Defined as code in `render.yaml` (a Render Blueprint), so the deploy is reproduc
 | Python + FastAPI + Uvicorn + PyMongo | ~90 MB |
 | fastembed MiniLM (ONNX) | ~90 MB |
 | Injection classifier | 0 MB (Prompt Guard runs on Groq) |
-| scikit-learn / XGBoost models | ~30 MB |
+| **Measured total (MiniLM loaded, under load)** | **229 MB** (214 MB idle) |
 | Working set (sessions, Markov counts, caches) | ~50 MB |
 | **Total target** | **≤ 420 MB**, leaving headroom |
 

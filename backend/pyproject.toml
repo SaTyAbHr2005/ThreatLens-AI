@@ -21,6 +21,8 @@ dependencies = [
     "pdfminer.six>=20240706",
     "beautifulsoup4>=4.12",
     "python-multipart>=0.0.9",
+    "numpy>=1.26",
+    "fastembed>=0.4",
 ]
 
 [project.optional-dependencies]

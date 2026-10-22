@@ -6,20 +6,21 @@
 # egress:     the call sends data to the resource (a host or a recipient)
 # output:     trusted | untrusted | by_label. Untrusted output is scanned and becomes provenance taint.
 # carrier:    what kind of content an untrusted output is (pdf, email, web, tool_output, ...)
+# phrase:     plain-language description, used to compare actions with a role's purpose
 
-supplier_db.query: { kind: name, resource_template: "suppliers.{table}" }
-files.read: { kind: path, resource_arg: path, output: by_label, carrier: pdf }
-erp.create_pr: { kind: name, resource: purchase_requests.new }
-erp.read_invoice: { kind: name, resource_template: "invoices.{invoice_id}" }
-erp.read_pr: { kind: name, resource_template: "purchase_requests.{pr_id}" }
-ledger.query: { kind: name, resource_template: "ledger.{ledger}" }
-hr_db.query: { kind: name, resource_template: "employees.{table}" }
-hr_db.update: { kind: name, resource_template: "employees.{table}" }
-tickets.read: { kind: name, resource_template: "tickets.{ticket_id}", output: untrusted, carrier: email }
-tickets.update: { kind: name, resource_template: "tickets.{ticket_id}" }
-kb.search: { kind: name, resource: kb.articles }
-email.send: { kind: email, resource_arg: to, egress: true }
-web.fetch: { kind: url, resource_arg: url, output: untrusted, carrier: web }
-http.post: { kind: url, resource_arg: url, egress: true }
-payments.transfer: { kind: name, resource_template: "payments.{to_account}", egress: true }
-logistics_api.track: { kind: name, resource_template: "shipments.{shipment_id}" }
+supplier_db.query: { kind: name, resource_template: "suppliers.{table}", phrase: "query supplier prices and terms" }
+files.read: { kind: path, resource_arg: path, output: by_label, carrier: pdf, phrase: "read file" }
+erp.create_pr: { kind: name, resource: purchase_requests.new, phrase: "create a purchase request" }
+erp.read_invoice: { kind: name, resource_template: "invoices.{invoice_id}", phrase: "read supplier invoice" }
+erp.read_pr: { kind: name, resource_template: "purchase_requests.{pr_id}", phrase: "read purchase request" }
+ledger.query: { kind: name, resource_template: "ledger.{ledger}", phrase: "query accounting ledger" }
+hr_db.query: { kind: name, resource_template: "employees.{table}", phrase: "look up employee HR records" }
+hr_db.update: { kind: name, resource_template: "employees.{table}", phrase: "update employee HR records" }
+tickets.read: { kind: name, resource_template: "tickets.{ticket_id}", output: untrusted, carrier: email, phrase: "read customer support ticket" }
+tickets.update: { kind: name, resource_template: "tickets.{ticket_id}", phrase: "update customer support ticket" }
+kb.search: { kind: name, resource: kb.articles, phrase: "search help knowledge base articles" }
+email.send: { kind: email, resource_arg: to, egress: true, phrase: "send an email" }
+web.fetch: { kind: url, resource_arg: url, output: untrusted, carrier: web, phrase: "fetch a web page" }
+http.post: { kind: url, resource_arg: url, egress: true, phrase: "upload data to a web server" }
+payments.transfer: { kind: name, resource_template: "payments.{to_account}", egress: true, phrase: "transfer money to a bank account" }
+logistics_api.track: { kind: name, resource_template: "shipments.{shipment_id}", phrase: "track shipment delivery status" }

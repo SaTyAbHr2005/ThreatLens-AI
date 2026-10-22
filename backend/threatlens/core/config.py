@@ -52,6 +52,11 @@ class Settings(BaseSettings):
     # Injection classifier served by Groq (uses GROQ_API_KEY); empty disables it.
     prompt_guard_model: str = "meta-llama/llama-prompt-guard-2-86m"
 
+    # Role-conformance embeddings (S1). "hashing" needs no model download (offline / tests).
+    embedding_backend: Literal["fastembed", "hashing"] = "fastembed"
+    embedding_model: str = "sentence-transformers/all-MiniLM-L6-v2"
+    models_dir: Path = Path(__file__).resolve().parents[2] / "models"  # baked into the Docker image
+
     # Other services
     ml_service_url: str | None = None
     discord_webhook_url: str | None = None

@@ -22,6 +22,7 @@ dist/
 *.local
 
 # Models & generated data
+backend/models/
 models/*.onnx
 models/*.bin
 models/*.safetensors

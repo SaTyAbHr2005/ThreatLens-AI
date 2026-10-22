@@ -15,6 +15,9 @@ RUN pip install .
 COPY roles ./roles
 COPY catalog ./catalog
 
+# Bake the embedding model into the image: Render's free plan has no persistent disk.
+RUN python -c "from threatlens.detection.embedder import warm; warm('sentence-transformers/all-MiniLM-L6-v2', '/app/models')"
+
 RUN useradd --create-home app && chown -R app /app
 USER app
 
