@@ -354,7 +354,7 @@ Use the passport/hologram visual language from DESIGN.md, not a generic dark cyb
 
 ## 13. Submission checklist
 
-- [ ] Public repo: README (USP at the top, screenshots, GIF), ARCHITECTURE, PRODUCTION, DESIGN, PLAN
+- [x] Public repo: README (USP at the top, screenshots, GIF), ARCHITECTURE, PRODUCTION, DESIGN, PLAN
 - [ ] Live links: Vercel console + Render API docs (`/docs`), warm
 - [ ] `docker compose up` works on a clean machine (a teammate tests it)
 - [ ] Demo video ≤ 3 minutes, linked in the README
