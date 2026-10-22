@@ -45,8 +45,8 @@ The system is split into **12 modules**. Each one has a single owner, a public i
 | **M5** | Risk Fusion & Explainability | `backend/threatlens/fusion` | 0–100 risk, drift score, factors, narrative, counterfactual | **v1** fusion + explainability |
 | **M6** | Response & Containment | `backend/threatlens/response` | Tiers, PDP, scope snap-back, approvals, notifications | **v1** alerts & recommendations |
 | **M7** | Threat Intelligence Hub | `backend/threatlens/intel` | Fleet trends, injection signature feed, fleet immunity, LLM arena | **v1** threat intel + LLM comparison |
-| **M8** | Enterprise Simulator & Red Team | `sim/` | Mock enterprise tools, LLM + replay agents, scenarios, Red Team Studio | new + **v1** injection techniques |
-| **M9** | Evaluation Lab | `eval/` | Dataset generation, metrics, ablations | new |
+| **M8** | Enterprise Simulator & Red Team | `backend/threatlens/sim` | Mock enterprise tools, LLM + replay agents, scenarios, Red Team Studio | new + **v1** injection techniques |
+| **M9** | Evaluation Lab | `backend/threatlens/evaluation` | Dataset generation, metrics, ablations | new |
 | **M10** | API & Console Security | `backend/threatlens/api` | REST + WebSocket, analyst auth (Slider CAPTCHA + login anomaly) | **v1** auth layer |
 | **M11** | Web Experience | `web/` | Landing story (3D, scroll) + SOC Console + design system | new (see DESIGN.md) |
 
@@ -70,14 +70,14 @@ flowchart BT
     M7[M7 Intel] -.->|subscribes to event bus| M0
     M10[M10 API] --> M2
     M10 --> M7
-    M8[M8 Simulator] ==>|HTTP via SDK only| M10
-    M9[M9 Eval] ==>|HTTP via SDK only| M10
+    M8[M8 Simulator] ==>|gateway entrypoint| M2
+    M9[M9 Eval] ==>|gateway entrypoint| M2
     M11[M11 Web] ==>|REST + WS| M10
 ```
 
 - **M0 depends on nothing.** Everything else may import M0.
 - **Detection modules never import the Gateway.** The Gateway orchestrates them.
-- **M8 Simulator and M9 Eval only use the public SDK/HTTP API**, exactly like a real customer would. This proves ThreatLens is a drop-in product and not hard-wired to our demo.
+- **M8 Simulator and M9 Eval only call the gateway's public entrypoints** (`tool_call`, `register_content`), the same code path an SDK call takes, so what they measure is what a real agent gets. Neither reaches into detection internals.
 - **M7 Intel is a passive subscriber.** If it crashes, detection and enforcement keep working.
 
 ---
@@ -501,13 +501,38 @@ Code: `backend/threatlens/sim/`. Everything runs in-process against synthetic da
 
 ### M9 · Evaluation Lab
 
-- `eval/generate.py`: ~20k benign actions across 4–6 roles plus ≥ 30 randomized instances per scenario, with labels.
-- `eval/run_eval.py`: trains fusion weights on the train split and tests on held-out sessions **and held-out attack variants** (new domains, new hidden-text techniques).
-- **Metrics:** per-scenario detection rate, time-to-detect (actions), false alerts per 1k benign actions, B1/B2 false-alert rate, **legit work preserved** during containment, **exfil bytes prevented**, gateway p50/p95 latency, and the USP metric **attribution accuracy**: the share of injection-driven alerts whose top-ranked cause is the actual poisoned content item.
-- `eval/load_test.py` (Locust): throughput and p95 on the Docker Compose stack, so the production-sizing claims start from measured numbers.
-- **Ablation:** IAM-only · + Role Contract policy · baseline only (S2, S3) · + provenance (S4) · full. Results go to `eval/results/latest.json`, which the Console's Evaluation page reads.
+Code: `backend/threatlens/evaluation/`. Run it with `python -m threatlens.evaluation.run` (inside the API image); it writes `backend/catalog/eval_results.json`, which `GET /v1/eval/latest` serves and the Console's Evaluation page reads.
 
-> Never present numbers we didn't measure. The expected story is that the IAM-only row catches **0** attacks, because every token was valid. That one row *is* the problem statement.
+- **Dataset** (`dataset.py`): benign sessions for four roles (common work plus 15% rarer but in-contract actions) and randomized instances of A1 (hidden instruction in a document), A2 (poisoned web page), A5 (slow drift after a 30-action clean history) and A6 (mimicry: normal tools, wrong resource). Every attack carries the id of its poisoned content, the ground truth for attribution. Train and test sets use different seeds; the test set may use an **exfil domain and a hiding technique (base64) never seen in training**.
+- **Harness** (`harness.py`): every session runs through an isolated, in-memory copy of the real gateway, detector, fusion and response engine (production baselines and alerts are never touched; fleet immunity is off, so each variant is judged on its own). Two passes over the test set: **shadow** (score everything, contain no one) feeds the ablation; **enforced** measures outcomes.
+- **Ablation** (`metrics.py`): the shadow pass's recorded signals are re-fused with only some signals kept, so every configuration sees exactly the same traffic. Each is reported at the production threshold (risk ≥ 60, Restrict) and at a **matched 2% false-positive rate** (its own threshold), the fair way to compare detectors.
+- **Fitting:** `fit_logistic` refits the fusion weights on the train set; the fitted model is reported next to the hand-tuned one. `--save-weights` writes them for production.
+- **Scenario suite:** the nine M8 scenarios (A1–A7, B1–B2) run on a fresh stack as a regression check, and CI (`.github/workflows/ci.yml`) runs the whole test suite, M9 included, on every push.
+
+**Measured** (MiniLM, hand-tuned weights, seed 7; 720 test sessions = 600 benign with 3,555 scored benign actions + 120 attacks, 16 of them held-out variants; 17 s, inside a 512 MB container):
+
+| Configuration | Detected @ risk ≥ 60 | Benign sessions alerted @ 60 | Detected @ 2% FPR | A1 / A2 / A5 / A6 @ 2% FPR |
+|---|---|---|---|---|
+| IAM only (valid token, broad grants) | **0%** | 0% | **0%** | 0 / 0 / 0 / 0 |
+| Role conformance alone (S1) | 0% | 0% | 100% | 100 / 100 / 100 / 100 |
+| Behavioural anomaly alone (S2 + S3) | 0% | 0% | 31% | 67 / 0 / 0 / 57 |
+| + provenance and data-flow (S1–S5) | 100% | 0% | 100% | 100 / 100 / 100 / 100 |
+| **ThreatLens, all nine signals** | **100%** | **0%** | 100% | 100 / 100 / 100 / 100 |
+| All nine, weights fitted on train | 100% | 0% | 100% | 100 / 100 / 100 / 100 |
+
+With enforcement on: **100% of legitimate benign actions allowed** (no benign agent contained), **100% of malicious actions blocked**, **0 bytes reached the attacker's sink**, **attribution accuracy 100%** (every injection alert named the actual poisoned item), every attack detected on its **first** malicious action, held-out variants 16/16, and all nine scenarios pass. Detection + fusion + response cost p50 0.33 ms / p95 0.50 ms per action with the embedding cache warm (repeated action descriptions); an uncached MiniLM embedding adds about 2.5 ms (p95 3.7 ms).
+
+How to read it honestly:
+- **The IAM-only row is the problem statement:** every token was valid, so credentials alone catch nothing.
+- Classic behavioural anomaly detection misses the attacks that look normal: A2 (one egress call after reading a page) and A5 (a slow walk away from the role) are 0%.
+- The traffic is synthetic and the benign side stays inside each Role Contract, so role conformance separates it cleanly once given its own threshold. On its own, though, it never reaches the action threshold: fusion needs corroboration, which keeps a single noisy signal from containing an agent. Real traffic will be noisier; shadow mode is how a deployment measures its own numbers before enforcing.
+- Legitimate work outside the contract is a contract change, not benign traffic: it is flagged until a signed amendment approves it (B1 checks that path).
+- The fitted weights are not saved by default. This dataset does not exercise S0, S6 or S8 (stolen token, delegation and canary are covered by the scenario suite), so fitting drives those weights to ~0. The tripwire floors would still fire, but the hand-tuned weights stay the production default.
+- Not done: a Locust load test against the Compose stack. The latency above is measured in-process; add the load test when sizing claims need end-to-end numbers.
+
+**API:** `GET /v1/eval/latest` (public, measured numbers only; 404 until a run exists) and `POST /v1/eval/run?benign=&attacks=` (operator; a smaller background re-run sized for the free tier).
+
+**Done when:** the IAM-only row catches 0, the full system catches the attacks with a low false-positive rate, and the results file comes from a real run. ✅ The table above, `backend/catalog/eval_results.json`, and `tests/evaluation/`.
 
 ### M10 · API & Console Security
 

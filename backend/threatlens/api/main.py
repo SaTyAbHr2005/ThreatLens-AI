@@ -19,6 +19,7 @@ from threatlens.detection import (
     save_baselines,
 )
 from threatlens.fusion import FusionScorer, MemoryAlertStore, MongoAlertStore, Weights, attach_minute_sink
+from threatlens.evaluation.router import router as eval_router
 from threatlens.fusion.router import router as alerts_router
 from threatlens.gateway import Catalog, Gateway, HttpToolConnector, attach_mongo_sinks
 from threatlens.sim import EnterpriseConnector, ExternalSink, ScenarioRunner, enterprise_router, sim_router
@@ -147,6 +148,7 @@ app.include_router(response_router)
 app.include_router(intel_router)
 app.include_router(enterprise_router)
 app.include_router(sim_router)
+app.include_router(eval_router)
 
 
 @app.get("/v1/health")

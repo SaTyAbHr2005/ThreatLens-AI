@@ -37,6 +37,8 @@ class Settings(BaseSettings):
     catalog_dir: Path = Path(__file__).resolve().parents[2] / "catalog"  # backend/catalog
     # Fitted risk-fusion weights (written by the evaluation lab, M9). Missing = hand-tuned defaults.
     fusion_weights_path: Path = Path(__file__).resolve().parents[2] / "catalog" / "fusion_weights.json"
+    # Latest evaluation results (M9), served by GET /v1/eval/latest.
+    eval_results_path: Path = Path(__file__).resolve().parents[2] / "catalog" / "eval_results.json"
 
     # Where the gateway forwards allowed tool calls (POST {url}/tools/{tool}).
     # The mock enterprise (M8) serves them; production points at real tool servers.

@@ -17,6 +17,7 @@ from threatlens.core.schemas import (
     AlertStatus,
     Decision,
     DecisionType,
+    EnforcementMode,
     RoleAmendment,
     Tier,
 )
@@ -77,7 +78,8 @@ class ResponseOrchestrator:
             self._strikes[agent_id] = self._strikes.get(agent_id, 0) + 1
         strikes = self._strikes.get(agent_id, 0)
         target = escalation(before, risk, ctx.agent.drift, r.tripwires, strikes)
-        if level(target) > level(before):
+        # Shadow mode scores and alerts but never contains (the alert still says what would happen).
+        if level(target) > level(before) and ctx.contract.enforcement_mode is not EnforcementMode.shadow:
             await self._set_status(ctx.agent, target, self._why(target, r, event, strikes), "system",
                                    event=event, alert_id=r.alert_id)
         alert = self.fusion.live_alert(r.alert_id) if r.alert_id else None

@@ -151,7 +151,7 @@ The module definitions, interfaces, and "done when" tests are in [ARCHITECTURE.m
 - [x] M5: logistic fusion + tripwire floors, drift score, factors/evidence, cause attribution, **counterfactual**, template + LLM narrative, alerts API
 - [x] M6: contain-first policy (Restrict / Step-up, isolate on certainty or 3 strikes), same-call containment, cascading revocation, auto-relax, Step-up approvals, analyst actions + amendments, audit log, dossier + OCSF, Discord
 - [x] M8: mock enterprise (synthetic data, sandboxed sink), scenario runner A1–A7 + B1–B2 (all pass live), real-LLM A1 mode, Red Team test harness
-- [ ] M9: dataset generator, eval with ablation + **attribution accuracy**, CI regression suite
+- [x] M9: dataset generator (held-out variants), shadow + enforced passes, ablation at the production threshold and at matched FPR, **attribution accuracy** (100%), fitted vs hand-tuned weights, scenario regression suite in CI
 - [ ] M10: REST + WebSocket, analyst JWT login, `/metrics`, `/v1/health`
 - [ ] M11: landing (hero passport + hijack story), console (Overview, Agents, Incidents, Simulate, Evaluation)
 

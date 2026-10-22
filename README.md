@@ -93,7 +93,7 @@ The system is split into 12 modules (M0–M11) with clear interfaces. See [ARCHI
 | M6 Response | Containment tiers, approvals, notifications, reports |
 | M7 Threat Intel | Fleet trends, signature feed, fleet immunity, LLM arena |
 | M8 Simulator & Red Team | Mock enterprise, LLM + replay agents, scenarios, Red Team Studio |
-| M9 Evaluation | Dataset, metrics, ablations, load test |
+| M9 Evaluation | Dataset, metrics, ablations, scenario regression suite |
 | M10 API & Console Security | REST, WebSocket, analyst auth, metrics |
 | M11 Web | Landing story + SOC console |
 
@@ -127,12 +127,12 @@ ThreatLensAI/
 │   ├── fusion/        # M5  risk, drift, explanation, counterfactual
 │   ├── response/      # M6  tiers, containment, approvals, notify, reports
 │   ├── intel/         # M7  trends, signatures, fleet immunity, arena
+│   ├── sim/           # M8  mock enterprise, scenarios, LLM agent, red team
+│   ├── evaluation/    # M9  dataset, harness, ablation metrics, run CLI
 │   └── api/           # M10 routers, websocket, analyst auth, metrics
 ├── backend/Dockerfile # the image Render runs (and docker compose locally)
 ├── backend/threatlens_sdk/ # Python SDK for agents (depends only on httpx)
-├── backend/catalog/   # tool catalog + sensitivity labels (incl. canaries)
-├── sim/               # M8  mock enterprise, agents (llm/ + replay/), scenarios, red team
-├── eval/              # M9  generate, run_eval, load_test, results/
+├── backend/catalog/   # tool catalog, sensitivity labels (incl. canaries), eval_results.json
 ├── backend/roles/     # Role Contract YAMLs (contracts as code)
 ├── web/               # M11 landing + console (see DESIGN.md)
 ├── docs/              # diagrams, screenshots, deck, free-tier-limits.md
@@ -173,7 +173,7 @@ curl http://localhost:8000/v1/health
 |---------|-----|
 | API + interactive docs | http://localhost:8000/docs |
 | Landing + console *(coming, M11)* | http://localhost:5173 |
-| Mock enterprise *(coming, M8)* | http://localhost:8000/enterprise |
+| Mock enterprise | http://localhost:8000/enterprise |
 
 **No Atlas or no internet?** Run `docker compose --profile local-db up --build` and set `MONGO_URI=mongodb://mongo:27017` in `.env`.
 
@@ -189,16 +189,16 @@ docker run --rm -v "${PWD}/backend:/app" -w /app python:3.11-slim sh -c "pip ins
 
 The database test that needs a real cluster is skipped unless you pass `-e MONGO_TEST_URI=<atlas test db uri>`.
 
-Run the headline attack *(coming, M8)*:
+Run the headline attack:
 
 ```bash
 curl -X POST http://localhost:8000/v1/sim/scenarios/A1/run
 ```
 
-Reproduce the evaluation *(coming, M9)*:
+Reproduce the evaluation (about 20 s; the mount writes the results back to `backend/catalog/eval_results.json`, which `/v1/eval/latest` serves):
 
 ```bash
-docker compose run --rm api python -m eval.run_eval --out eval/results/latest.json
+docker compose run --rm -v "${PWD}/backend/catalog:/app/catalog" api python -m threatlens.evaluation.run
 ```
 
 ## Deploy for free
