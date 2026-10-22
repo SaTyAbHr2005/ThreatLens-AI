@@ -19,7 +19,7 @@ from threatlens.core.schemas import Carrier, ContentItem, HiddenSpan, TrustLevel
 
 from .decoder import decode
 from .extract import Extracted, ExtractionError, extract_email, extract_html, extract_pdf
-from .heuristics import URL, injection_score, phishing_score, url_risk
+from .heuristics import URL, injection_score, phishing_score, top_instruction, url_risk
 from .promptguard import PromptGuard, PromptGuardUnavailable
 
 log = logging.getLogger(__name__)
@@ -52,6 +52,7 @@ class Analysis(BaseModel):
     phishing_findings: list[str] = []
     urls: list[UrlFinding] = []
     scored_by: str
+    instruction: str = ""  # the attack's most instruction-like sentence
 
     def to_item(self, trust: TrustLevel) -> ContentItem:
         findings = list(dict.fromkeys(self.injection_findings + self.phishing_findings))
@@ -68,6 +69,7 @@ class Analysis(BaseModel):
             decoded_text=self.revealed_text[:2000],
             scored_by=self.scored_by,
             findings=findings,
+            instruction=self.instruction,
         )
 
 
@@ -161,6 +163,8 @@ class ContentForensics:
             phishing_findings=phish_findings,
             urls=urls,
             scored_by=scored_by,
+            instruction=(top_instruction(decode(revealed).clean_text, self.internal_domains) if revealed else "")
+            or top_instruction(visible.clean_text, self.internal_domains),
         )
         self._cache[digest] = analysis
         if len(self._cache) > self._cache_size:

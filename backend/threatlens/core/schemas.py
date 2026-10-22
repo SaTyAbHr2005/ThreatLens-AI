@@ -264,6 +264,9 @@ class ContentItem(_Model):
     decoded_text: str = Field("", max_length=2000)
     scored_by: str = "heuristic"  # model | heuristic | llm | signature
     findings: list[str] = Field(default_factory=list)  # plain-language reasons behind the scores
+    instruction: str = Field("", max_length=500)  # the most instruction-like sentence (attack fingerprint)
+    read_by: str | None = None  # agent whose session read it (set by the gateway)
+    signature_id: str | None = None  # matched a known attack in the fleet signature feed (M7)
     created_at: datetime = Field(default_factory=utcnow)
 
 

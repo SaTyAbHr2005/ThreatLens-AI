@@ -266,6 +266,7 @@ class Gateway:
             # Unreadable content still counts as untrusted input: track it, unscored.
             log.exception("content scan failed for %s", source)
             item = await HashOnlyScanner().scan(source, carrier, text, TrustLevel.untrusted, raw, media_type)
+        item.read_by = session.agent_id
         session.taint(item)
         self.bus.publish(Topics.content_scanned, item)
         return item

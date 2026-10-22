@@ -24,6 +24,8 @@ from threatlens.gateway import Catalog, Gateway, HttpToolConnector, Unconfigured
 from threatlens.gateway.router import router as gateway_router
 from threatlens.identity import MemoryRegistryStore, MongoRegistryStore, Registry
 from threatlens.identity.router import router as identity_router
+from threatlens.intel import Arena, ImmuneScanner, IntelHub, SignatureBook
+from threatlens.intel.router import router as intel_router
 from threatlens.response import DiscordNotifier, MemoryDecisionStore, MongoDecisionStore, ResponseOrchestrator
 from threatlens.response.router import router as response_router
 from threatlens.scanner import ContentForensics, PromptGuard
@@ -78,10 +80,16 @@ async def lifespan(app: FastAPI):
         MongoDecisionStore(app.state.db) if persist else MemoryDecisionStore(),
     )
 
+    book = SignatureBook(app.state.db if persist else None)
+    if db_ok:
+        await book.load()
+    app.state.intel = IntelHub(app.state.registry, book)
+    app.state.arena = Arena(app.state.llm, db=app.state.db if persist else None, bus=bus)
+
     connector = HttpToolConnector(settings.tools_base_url) if settings.tools_base_url else UnconfiguredConnector()
     app.state.gateway = Gateway(
         app.state.registry, catalog, connector,
-        scanner=app.state.forensics, scorer=app.state.response, settings=settings,
+        scanner=ImmuneScanner(app.state.forensics, book), scorer=app.state.response, settings=settings,
     )
     app.state.gateway.approvals = app.state.response.approvals
     app.state.response.gateway = app.state.gateway
@@ -90,6 +98,7 @@ async def lifespan(app: FastAPI):
     unsubscribe.append(bus.subscribe(Topics.action_scored, app.state.detector.observe))
     unsubscribe += app.state.fusion.attach(bus)
     unsubscribe += app.state.response.attach(bus)
+    unsubscribe += app.state.intel.attach(bus)
     if persist:
         unsubscribe.append(attach_minute_sink(bus, app.state.db, app.state.registry))
     notifier = DiscordNotifier(settings.discord_webhook_url, console_url=settings.console_url) \
@@ -127,6 +136,7 @@ app.include_router(gateway_router)
 app.include_router(forensics_router)
 app.include_router(alerts_router)
 app.include_router(response_router)
+app.include_router(intel_router)
 
 
 @app.get("/v1/health")
@@ -147,6 +157,8 @@ async def health() -> dict:
         "fusion_weights": app.state.fusion.weights.source,
         "pending_approvals": len([a for a in app.state.response.approvals.list() if a.status.value == "pending"]),
         "notifications": "discord" if settings.discord_webhook_url else "off",
+        "signatures": len(app.state.intel.book.all()),
+        "arena_models": app.state.arena.models(),
         "baselines": {"agents": len(app.state.detector.store.agents), "roles": len(app.state.detector.store.roles)},
         "llm": app.state.llm.status(),
     }

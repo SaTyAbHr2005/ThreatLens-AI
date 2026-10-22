@@ -90,6 +90,19 @@ def injection_score(text: str, internal_domains: tuple[str, ...] = ("corp.exampl
     return round(best, 4), best_findings
 
 
+def top_instruction(text: str, internal_domains: tuple[str, ...] = ("corp.example",)) -> str:
+    """The single most instruction-like sentence (empty if none scores). Used as the
+    attack's fingerprint, so re-wrapped or re-hidden copies of it can be recognised."""
+    best, best_s = 0.0, ""
+    for s in SENTENCE_BREAK.split(text[:200_000]):
+        s = s.strip()
+        if len(s) >= 6:
+            score, _ = injection_score(s, internal_domains)
+            if score > best:
+                best, best_s = score, s
+    return best_s[:500]
+
+
 def _internal_domain(host: str, internal_domains: tuple[str, ...]) -> bool:
     host = host.lower()
     return any(host == d or host.endswith("." + d) for d in internal_domains)
