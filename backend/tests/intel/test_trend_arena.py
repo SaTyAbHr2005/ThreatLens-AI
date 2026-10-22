@@ -6,7 +6,7 @@ from threatlens.core.bus import EventBus, Topics
 from threatlens.core.llm import LLMRouter, Provider
 from threatlens.core.schemas import Action, ActionEvent
 from threatlens.intel import Arena, TrendBook, fleet_score, verdict
-from threatlens.intel.arena import ToolCall
+from threatlens.intel.arena import ToolCall, _reason
 
 from intel_data import INSTRUCTION
 
@@ -96,3 +96,12 @@ async def test_arena_runs_every_model_in_a_sandbox():
     assert by["flaky"].verdict == "followed" and "after 1 tool call" in by["flaky"].error
     assert arena.get(run.id).status == "done" and arena.get(run.id).followed == 2
     assert progress[-1] == {"run_id": run.id, "status": "done", "followed": 2, "models": 4}
+
+
+def test_failure_reasons_are_readable():
+    req = httpx.Request("POST", "https://openrouter.ai/api/v1/chat/completions")
+    gone = httpx.HTTPStatusError("404", request=req, response=httpx.Response(404, request=req))
+    assert _reason(gone) == "HTTP 404: the model id no longer exists on the provider"
+    busy = httpx.HTTPStatusError("429", request=req, response=httpx.Response(429, request=req))
+    assert "rate-limited" in _reason(busy)
+    assert _reason(TimeoutError()).startswith("timed out")

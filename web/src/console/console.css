@@ -1287,6 +1287,14 @@
   font-weight: 700;
 }
 
+.arena-why {
+  display: block;
+  margin-top: 2px;
+  font-size: 12px;
+  font-weight: 400;
+  color: var(--guilloche);
+}
+
 .arena-row.v-resisted td:nth-child(2) {
   color: #7fd4b4;
 }

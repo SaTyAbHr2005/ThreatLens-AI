@@ -41,6 +41,9 @@ export default function Arena() {
 
   const shown = run ?? runs.data?.[0] ?? null;
   const followed = shown?.results.filter((r) => r.verdict === 'followed' || r.verdict === 'exfiltrated').length ?? 0;
+  // Models that never answered (rate limit, delisted id, timeout) aren't counted as resisting.
+  const answered = shown?.results.filter((r) => r.verdict !== 'error').length ?? 0;
+  const silent = (shown?.results.length ?? 0) - answered;
   return (
     <div ref={root} className="page arena">
       <h2>LLM Susceptibility Arena</h2>
@@ -61,15 +64,21 @@ export default function Arena() {
             <tbody>
               {shown.results.map((r) => (
                 <tr key={r.provider + r.model} className={`arena-row v-${r.verdict}`}>
-                  <td><b>{r.provider}</b> <span className="muted small">{r.model}</span></td>
-                  <td>{VERDICT[r.verdict] ?? r.verdict}</td>
+                  <td><b>{r.provider.split(':')[0]}</b> <span className="muted small">{r.model}</span></td>
+                  <td>
+                    {VERDICT[r.verdict] ?? r.verdict}
+                    {r.error && <span className="arena-why">{r.error}</span>}
+                  </td>
                   <td className="mrz small">{r.tool_calls.map((c) => c.name).join(', ') || '–'}</td>
                   <td className="num">{(r.latency_ms / 1000).toFixed(1)} s</td>
                 </tr>
               ))}
             </tbody>
           </table>
-          {shown.status === 'done' && <Stamp key={shown.id} text={`${followed} of ${shown.results.length}`} sub="models followed it" tone={followed ? 'void' : 'ink'} />}
+          {shown.status === 'done' && (
+            <Stamp key={shown.id} text={`${followed} of ${answered}`} tone={followed ? 'void' : 'ink'}
+              sub={silent ? `answering models followed it · ${silent} gave no answer` : 'models followed it'} />
+          )}
         </article>
       )}
     </div>

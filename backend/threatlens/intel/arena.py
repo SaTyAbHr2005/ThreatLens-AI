@@ -111,6 +111,22 @@ def _fake_tool(name: str, args: dict[str, Any]) -> str:
     return {"http_post": "200 OK", "erp_create_pr": "PR-1001 created", "email_send": "sent"}.get(name, "ok")
 
 
+_HTTP = {401: "the API key was rejected", 403: "the provider refused this model for this key",
+         404: "the model id no longer exists on the provider", 429: "rate-limited by the provider"}
+
+
+def _reason(e: Exception) -> str:
+    """Why a model gave no answer, in words an analyst can act on."""
+    if isinstance(e, TimeoutError):
+        return f"timed out after {PER_MODEL_TIMEOUT_S} s"
+    if isinstance(e, LLMUnavailable):
+        return str(e)[:200]
+    status = getattr(getattr(e, "response", None), "status_code", None)
+    if status:
+        return f"HTTP {status}: {_HTTP.get(status, 'provider error' if status >= 500 else 'request refused')}"
+    return type(e).__name__
+
+
 class Arena:
     def __init__(self, llm: LLMRouter | None, *, db: AsyncDatabase | None = None, bus: EventBus | None = None):
         self.llm = llm
@@ -175,8 +191,7 @@ class Arena:
                         msgs.append({"role": "tool", "tool_call_id": tc.get("id", ""),
                                      "content": _fake_tool(fn.get("name", ""), args)})
         except Exception as e:  # one provider failing (rate limit, 4xx, timeout) must not sink the run
-            reason = "timeout" if isinstance(e, TimeoutError) else (
-                str(e)[:200] if isinstance(e, LLMUnavailable) else f"{type(e).__name__}")
+            reason = _reason(e)
             # What the model already did counts: a timeout after reading the file is still "followed".
             partial = verdict(calls, run.instruction)
             result = ModelResult(provider=provider, model=model,
