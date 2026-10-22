@@ -53,11 +53,19 @@ function Shell() {
   const nav = useNavigate();
   const [palette, setPalette] = useState(false);
 
+  // Page change: focus moves to the new page, so keyboard and screen-reader users land on it.
+  const page = loc.pathname.split('/')[2] ?? '';
+  const first = useRef(true);
+  useEffect(() => {
+    if (first.current) first.current = false;  // on first load, Tab starts at the skip link
+    else main.current?.focus({ preventScroll: true });
+  }, [page]);
+
   // Page change: the new page is laid down like a sheet sliding onto the desk.
   useGSAP(() => {
     if (reduced() || !main.current) return;
     gsap.fromTo(main.current, { opacity: 0, x: 14 }, { opacity: 1, x: 0, duration: 0.26, ease: 'power3.out' });
-  }, { dependencies: [loc.pathname.split('/')[2] ?? ''] });
+  }, { dependencies: [page] });
 
   // Keyboard: ⌘K palette, "g" then a letter to go to a page.
   useEffect(() => {
@@ -86,6 +94,7 @@ function Shell() {
 
   return (
     <div className="shell">
+      <a className="skip" href="#page">Skip to the page</a>
       <aside className="rail">
         <NavLink to="/" className="rail-mark"><Seal /> ThreatLens</NavLink>
         <nav aria-label="Console">
@@ -99,7 +108,7 @@ function Shell() {
         <button className="rail-k" onClick={() => setPalette(true)}>Commands <kbd>⌘K</kbd></button>
       </aside>
       <StatusStrip />
-      <main ref={main} className="main">
+      <main ref={main} id="page" className="main" tabIndex={-1} aria-label="Console page">
         <Routes>
           {PAGES.map((p) => <Route key={p.path} path={p.path} element={p.el} />)}
           <Route path="incidents/:id" element={<Incidents />} />
@@ -171,7 +180,7 @@ function StatusStrip() {
       </span>
       {health?.llm.map((p) => (
         <span key={p.provider} className={p.ready ? 'chip' : 'chip chip-tarnish'} title={p.last_error ?? p.model}>
-          {p.provider} {p.ready ? '✓' : `rate-limited, ${Math.ceil(p.cooldown_s)} s`}
+          {shortModel(p.provider)} {p.ready ? '✓' : `rate-limited, ${Math.ceil(p.cooldown_s)} s`}
         </span>
       ))}
       {health && !health.llm.length && <span className="chip" title="Explanations use templates">LLM: templates</span>}
@@ -182,6 +191,11 @@ function StatusStrip() {
       </span>
     </header>
   );
+}
+
+/** "openrouter:nvidia/nemotron-3.5-lightning:free" → "nemotron-3.5-lightning"; the full id stays in the tooltip. */
+function shortModel(provider: string) {
+  return provider.includes(':') ? provider.split(':')[1].split('/').pop()! : provider;
 }
 
 function Palette({ onClose }: { onClose: () => void }) {

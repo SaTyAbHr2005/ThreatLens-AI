@@ -12,6 +12,8 @@ AI agents now get their own tokens and permissions. When a hidden instruction in
 
 [Architecture](ARCHITECTURE.md) · [Production deployment](PRODUCTION.md) · [Design system](DESIGN.md) · [Build plan](PLAN.md) · Demo video: *coming soon*
 
+![The A1 attack on the landing page: the agent passport shows VOID, and the upload is contained](docs/screenshots/hijack-contained.webp)
+
 ---
 
 ## The problem
@@ -104,6 +106,15 @@ The system is split into 12 modules (M0–M11) with clear interfaces. See [ARCHI
 ## Interface
 
 The design language comes from **security documents**. Each agent has a passport whose guilloche rosette is generated from its Role Contract, with one ring per detection signal. The holographic seal **tarnishes and shows VOID** as the agent drifts. A UV lamp reveals hidden instructions inside documents, and analyst decisions land as stamps. Built with three.js, GSAP, and Lenis. See [DESIGN.md](DESIGN.md).
+
+| | |
+|---|---|
+| ![Landing page hero with the agent passport](docs/screenshots/landing.webp) | ![Console overview: agent passports, drift chart, live actions and the open incident](docs/screenshots/console-overview.webp) |
+| **Landing.** The agent passport, drawn in WebGL from its Role Contract. | **Console.** Passports, fleet drift, every action as it's scored, and open incidents. |
+| ![Incident dossier: the cause, factor bars with evidence and the counterfactual](docs/screenshots/incident-dossier.webp) | ![The hidden instruction decoded next to what a person sees, and the session timeline](docs/screenshots/hidden-instruction.webp) |
+| **Incident dossier.** Why it was flagged, signal by signal, and what the score would be without the poisoned PDF. | **The hidden instruction.** What a person sees in the PDF next to what the model read, then each step and its decision. |
+| ![LLM Susceptibility Arena: four free models given the same poisoned document](docs/screenshots/arena.webp) | |
+| **LLM Susceptibility Arena.** The same poisoned document given to every free model behind sandboxed tools. | |
 
 ## Tech stack ($0)
 

@@ -169,7 +169,7 @@ class LLMRouter:
             )
         except _RateLimited as e:
             why = f" ({e.detail})" if e.detail else ""
-            raise LLMRateLimited(f"{provider_name}: rate limited{why}, retry in {e.retry_after:.0f}s", e.retry_after) from e
+            raise LLMRateLimited(f"rate limited{why}, retry in {e.retry_after:.0f} s", e.retry_after) from e  # caller knows which provider
 
     def status(self) -> list[dict[str, Any]]:
         now = time.monotonic()

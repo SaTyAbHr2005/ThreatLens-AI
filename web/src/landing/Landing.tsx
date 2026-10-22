@@ -115,6 +115,7 @@ export default function Landing() {
         </nav>
       </header>
 
+      <main>
       <div className="dossier">
         <div className="col">
           <section className="hero">
@@ -209,6 +210,7 @@ export default function Landing() {
         <p className="quote">Agents carry passports. ThreatLens watches the hologram.</p>
         <Link className="btn btn-solid" to="/console">Open the console</Link>
       </section>
+      </main>
       <footer className="foot">
         <span>ThreatLens · behavioral identity firewall for AI agents</span>
         <span>MIT licensed</span>

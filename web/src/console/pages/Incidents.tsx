@@ -149,7 +149,7 @@ function Dossier({ id, onChange }: { id: string; onChange: () => void }) {
           <h2>What happened, in order</h2>
           <ol className="timeline">
             {steps.map((s) => (
-              <li key={s.id} className={a.timeline.includes(s.id) ? 'hit' : ''}>
+              <li key={s.id} className={[a.timeline.includes(s.id) && 'hit', s.decision?.startsWith('allow') && 'allowed'].filter(Boolean).join(' ')}>
                 <span className="mrz">{s.action.tool} {s.action.resource ?? s.action.destination ?? ''}</span>
                 <span>{decisionLabel[s.decision ?? ''] ?? '–'}</span>
                 <Risk value={s.risk} />

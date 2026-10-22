@@ -53,7 +53,7 @@ Two grounds: **paper** (documents, landing) and **intaglio** (the console, deep 
 | `--guilloche` | `#8DB3AA` | Line work and secondary text on intaglio |
 | `--foil` | shader (flat fallback `#B9C7E8`) | **Trusted.** Iridescent and view-angle dependent. Never used as a flat fill in the UI. |
 | `--tarnish` | `#C9A23A` | **Drifting** (MONITOR, RESTRICT) |
-| `--void` | `#C8323C` (text on dark: `#E5545D`) | **Compromised** (STEP-UP, ISOLATE), plus VOID patterns and the isolate stamp |
+| `--void` | `#C8323C` (text on dark: `#F4838A`, which keeps 4.5:1 on raised panels) | **Compromised** (STEP-UP, ISOLATE), plus VOID patterns and the isolate stamp |
 | `--uv` | `#7B5CFF` lamp light · `#E9F27A` fluorescent text | **Only** inside the UV forensics reveal |
 
 **Tier encoding never relies on color alone.** Each tier also changes the **pattern** (foil → hatched tarnish → VOID text pattern) and has a text label.

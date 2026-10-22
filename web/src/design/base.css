@@ -54,6 +54,13 @@ a {
   outline-offset: 3px;
 }
 
+/* On paper the foil ring nearly vanishes (1.3:1), so paper surfaces take an ink ring. */
+.landing :focus-visible,
+.dossier-sheet :focus-visible,
+.lab-doc :focus-visible {
+  outline-color: var(--paper-ink);
+}
+
 .mrz {
   font-family: var(--font-mrz);
   letter-spacing: 0.04em;
@@ -173,4 +180,21 @@ a {
 :root[data-theme='light'] .boot {
   background: #e3e9e2;
   color: #46626a;
+}
+
+/* Skip link: off screen until a keyboard user reaches it. */
+.skip {
+  position: fixed;
+  top: 8px;
+  left: 8px;
+  z-index: 100;
+  padding: 8px 14px;
+  border-radius: var(--r-ctl);
+  background: var(--paper);
+  color: var(--paper-ink);
+  transform: translateY(-200%);
+}
+
+.skip:focus {
+  transform: none;
 }

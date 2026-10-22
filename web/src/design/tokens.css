@@ -13,7 +13,7 @@
   --foil: #b9c7e8; /* flat fallback only; the real foil is a shader */
   --tarnish: #c9a23a;
   --void: #c8323c;
-  --void-on-dark: #e5545d;
+  --void-on-dark: #f4838a; /* 4.7:1 or better on every console panel */
   --uv: #7b5cff;
   --uv-ink: #e9f27a;
   --ok: #7fd4b4;
@@ -77,11 +77,11 @@
   --guilloche: #46626a;
   --guilloche-dim: #7b958f;
   --text-on-dark: #1c3a3f;
-  --void-on-dark: #c8323c;
+  --void-on-dark: #a8262f;
   --foil: #3f5b9c;
   --foil-hover: #344d86;
-  --ok: #1f7a5c;
-  --tarnish: #9a7618;
+  --ok: #1a6b50;
+  --tarnish: #73570c;
 }
 
 :root[data-theme='light'] body:has(.console) {

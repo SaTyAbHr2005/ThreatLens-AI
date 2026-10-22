@@ -1,0 +1,8 @@
+# ThreatLens AI
+
+> A behavioral identity firewall for AI agents: it checks every action an agent takes against the job it was created for, names the content that made it drift, and contains it without stopping its work.
+
+- [Landing page](https://threatlens-hq.vercel.app/): the A1 hijack story (a poisoned supplier PDF) told around the agent passport
+- [Analyst console](https://threatlens-hq.vercel.app/console): sign-in, live actions, incidents, scenarios and the LLM Susceptibility Arena
+- [API reference](https://threatlens-api-jv34.onrender.com/docs): the gateway, detection, response and evaluation endpoints
+- [Source code](https://github.com/SaTyAbHr2005/ThreatLens-AI): architecture, design system and evaluation results

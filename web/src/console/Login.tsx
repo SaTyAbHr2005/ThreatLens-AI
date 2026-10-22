@@ -72,7 +72,7 @@ export default function Login() {
 
   const rings = rosette('analyst-console');
   return (
-    <div ref={root} className="login">
+    <main ref={root} className="login">
       <ThemeToggle base="dark" className="login-theme" />
       <svg className="login-seal" viewBox="-1.02 -1.02 2.04 2.04" aria-hidden>
         {rings.map((_, i) => <path key={i} d={ringPath(rings, i, 0, 200)} pathLength={1} strokeDasharray={1} />)}
@@ -107,7 +107,7 @@ export default function Login() {
         <button className="btn btn-foil" disabled={busy || !trail}>{busy ? 'Checking…' : 'Sign in'}</button>
         <p className="muted small">The way you drag the slider is checked too: scripts move in straight lines at constant speed.</p>
       </form>
-    </div>
+    </main>
   );
 }
 
