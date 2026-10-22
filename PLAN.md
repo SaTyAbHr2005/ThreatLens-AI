@@ -361,4 +361,4 @@ Use the passport/hologram visual language from DESIGN.md, not a generic dark cyb
 - [ ] Deck PDF with **real** numbers, and the USP slide as slide 4
 - [x] Eval results committed (`backend/catalog/eval_results.json`) + CI badge for the scenario regression suite
 - [x] Judge credentials only in Render's settings, **never** in the repo; the sign-in page shows them (`DEMO_ANALYST_PUBLIC`) so judges don't need the form
-- [ ] Team names and module ownership in the README
+- [x] README stays about the project only: no team or module-ownership section

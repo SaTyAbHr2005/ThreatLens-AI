@@ -312,15 +312,6 @@ With enforcement on: 100% of legitimate actions allowed, 100% of malicious actio
 
 This project grows out of our earlier **ThreatLens AI** (phishing, malicious URL, and prompt-injection detection with explainability). Its detectors now serve as sensors for agent identity and behavior. See the [module map](ARCHITECTURE.md#2-module-map).
 
-## Team
-
-| Name | Modules |
-|------|---------|
-| *TBD* | Backend: M0, M1, M2, M6, M10 |
-| *TBD* | ML: M3, M4, M5, M7 |
-| *TBD* | Simulation & evaluation: M8, M9 |
-| *TBD* | Frontend & pitch: M11 |
-
 ## License
 
 MIT
