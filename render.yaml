@@ -33,3 +33,7 @@ services:
         sync: false
       - key: DISCORD_WEBHOOK_URL
         sync: false
+      - key: DEMO_ANALYST_EMAIL
+        sync: false # the demo console account (share it in the submission form, not in git)
+      - key: DEMO_ANALYST_PASSWORD
+        sync: false

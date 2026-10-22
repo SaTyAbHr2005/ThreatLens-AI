@@ -231,7 +231,9 @@ Free tiers sleep when idle and have memory and rate limits. See [ARCHITECTURE.md
 |----------|---------|
 | `MONGO_URI` | MongoDB connection string |
 | `JWT_SIGNING_KEY` | Signs agent, downstream, and analyst tokens, and Role Contract versions |
-| `ADMIN_API_KEY` | Sent as `X-Admin-Key` to create agents, amend roles, and draft contracts. Required in production. Optional locally. |
+| `ADMIN_API_KEY` | Sent as `X-Admin-Key` by scripts and CI for operator routes (analysts use the console login instead). Required in production. Optional locally. |
+| `DEMO_ANALYST_EMAIL` · `DEMO_ANALYST_PASSWORD` | The demo console account, created at startup. Set them in the Render dashboard and share them in the submission form, never in git. |
+| `RATE_LIMIT_PER_MIN` · `AUTH_RATE_LIMIT_PER_MIN` | Requests per minute per credential (default 600) and per IP on login (default 20) |
 | `AGENT_MODE` | `llm` or `replay` |
 | `GROQ_API_KEY` · `GEMINI_API_KEY` · `OPENROUTER_API_KEY` | Free LLM providers (all optional) |
 | `GROQ_MODEL` · `GEMINI_MODEL` · `OPENROUTER_MODELS` | Model IDs. Free lineups change, so check each provider's console. |
@@ -239,7 +241,7 @@ Free tiers sleep when idle and have memory and rate limits. See [ARCHITECTURE.md
 | `ML_SERVICE_URL` | Leave empty to run models inside the API (default). Set it only if you split models into a second Render service. |
 | `DISCORD_WEBHOOK_URL` · `RESEND_API_KEY` | Alert notifications (optional) |
 | `CORS_ORIGINS` | The Vercel domain |
-| `TOOLS_BASE_URL` | Where the gateway forwards allowed tool calls. Empty until the mock enterprise (M8) lands. |
+| `TOOLS_BASE_URL` | Where the gateway forwards allowed tool calls. Leave empty to use the built-in mock enterprise. |
 | `PROMPT_GUARD_MODEL` | Injection classifier served by Groq (uses `GROQ_API_KEY`). Default `meta-llama/llama-prompt-guard-2-86m`. Leave it empty for heuristics only. |
 | `FAIL_MODE_SENSITIVE` | `closed` (default) or `open` when the engine is unavailable |
 
@@ -259,16 +261,15 @@ Integration modes (SDK, MCP/egress proxy, passive telemetry), scaling, failure h
 
 ## Evaluation
 
-Measured by `eval/run_eval.py` on simulated enterprise traffic and tested on held-out attack variants.
+Measured by `python -m threatlens.evaluation.run` (MiniLM, seed 7) on synthetic enterprise traffic: 600 benign test sessions (3,555 actions) and 120 attacks (A1, A2, A5, A6), 16 of them variants with an exfil domain and a hiding technique never seen in training. Results: `backend/catalog/eval_results.json`, also at `GET /v1/eval/latest`.
 
-| Configuration | Detection rate | Attribution accuracy | False alerts / 1k actions | Time-to-detect |
-|---------------|---------------:|---------------------:|--------------------------:|---------------:|
-| Credentials / IAM only | *TBD* | n/a | *TBD* | *TBD* |
-| Role Contract policy only | *TBD* | n/a | *TBD* | *TBD* |
-| Behavioral baseline only | *TBD* | *TBD* | *TBD* | *TBD* |
-| **ThreatLens (full)** | *TBD* | *TBD* | *TBD* | *TBD* |
+| Configuration | Detected (risk ≥ 60) | Detected at matched 2% FPR | False alerts / 1k benign actions | Time-to-detect |
+|---------------|---------------------:|---------------------------:|---------------------------------:|---------------:|
+| Credentials / IAM only | **0%** | 0% | 0 | never |
+| Behavioural anomaly only (S2 + S3) | 0% | 31% (A2, A5: 0%) | 0 | n/a |
+| **ThreatLens (all nine signals)** | **100%** | 100% | **0** | first malicious action |
 
-Also reported: legitimate work preserved during containment, exfiltration bytes prevented, and gateway p95 latency. We don't publish numbers we haven't measured.
+With enforcement on: 100% of legitimate actions allowed, 100% of malicious actions blocked, **0 bytes** reached the attacker, **attribution accuracy 100%** (the alert named the actual poisoned item), held-out variants 16/16, all nine scenarios pass, and scoring takes p50 0.33 ms / p95 0.50 ms per action (warm embedding cache; about +2.5 ms uncached). The traffic is synthetic and benign work stays inside each Role Contract, so real deployments should measure their own numbers in shadow mode first. Details and caveats: [ARCHITECTURE.md §M9](ARCHITECTURE.md). We don't publish numbers we haven't measured.
 
 ## Roadmap
 

@@ -1,4 +1,5 @@
-"""FastAPI entrypoint (M10). Wires the modules together and mounts their routers."""
+"""FastAPI entrypoint (M10). Wires the modules together and mounts their routers,
+plus analyst login, the live WebSocket stream, session replay, /metrics and rate limiting."""
 
 import asyncio
 import logging
@@ -8,6 +9,15 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from threatlens import __version__
+from threatlens.api.auth import AnalystStore, AuthService
+from threatlens.api.auth import router as auth_router
+from threatlens.api.metrics import Metrics
+from threatlens.api.metrics import router as metrics_router
+from threatlens.api.ratelimit import RateLimiter
+from threatlens.api.replay import ReplayBuffer
+from threatlens.api.replay import router as replay_router
+from threatlens.api.stream import StreamHub
+from threatlens.api.stream import router as stream_router
 from threatlens.core import LLMRouter, Topics, bus, get_settings
 from threatlens.core import db
 from threatlens.detection import (
@@ -50,6 +60,7 @@ async def lifespan(app: FastAPI):
     # Production always persists to Atlas (startup fails loudly if it can't).
     # dev/test fall back to memory so the API still runs without a database.
     persist = db_ok or settings.env == "prod"
+    app.state.persist = persist
     if persist:
         store = MongoRegistryStore(app.state.db)
     else:
@@ -103,7 +114,14 @@ async def lifespan(app: FastAPI):
     app.state.sim_runner = ScenarioRunner(app.state.registry, app.state.gateway, app.state.fusion,
                                           app.state.external_sink, app.state.llm)
 
+    app.state.auth = AuthService(AnalystStore(app.state.db if persist else None), settings)
+    if db_ok:
+        await app.state.auth.store.load()
+    await app.state.auth.seed_demo()
+
     unsubscribe = attach_mongo_sinks(bus, app.state.db) if persist else []
+    app.state.stream, app.state.replay, app.state.metrics = StreamHub(), ReplayBuffer(), Metrics()
+    unsubscribe += app.state.stream.attach(bus) + app.state.replay.attach(bus) + app.state.metrics.attach(bus)
     unsubscribe.append(bus.subscribe(Topics.action_scored, app.state.detector.observe))
     unsubscribe += app.state.fusion.attach(bus)
     unsubscribe += app.state.response.attach(bus)
@@ -133,10 +151,12 @@ async def lifespan(app: FastAPI):
 
 settings = get_settings()
 app = FastAPI(title="ThreatLens AI", version=__version__, lifespan=lifespan)
+app.add_middleware(RateLimiter, per_min=settings.rate_limit_per_min, auth_per_min=settings.auth_rate_limit_per_min)
+# Added last, so it is outermost: 429s carry CORS headers too. Bearer tokens, no cookies.
 app.add_middleware(
     CORSMiddleware,
     allow_origins=settings.cors_origin_list,
-    allow_credentials=True,
+    allow_credentials=False,
     allow_methods=["*"],
     allow_headers=["*"],
 )
@@ -149,6 +169,10 @@ app.include_router(intel_router)
 app.include_router(enterprise_router)
 app.include_router(sim_router)
 app.include_router(eval_router)
+app.include_router(auth_router)
+app.include_router(stream_router)
+app.include_router(replay_router)
+app.include_router(metrics_router)
 
 
 @app.get("/v1/health")
@@ -171,6 +195,8 @@ async def health() -> dict:
         "pending_approvals": len([a for a in app.state.response.approvals.list() if a.status.value == "pending"]),
         "notifications": "discord" if settings.discord_webhook_url else "off",
         "signatures": len(app.state.intel.book.all()),
+        "analysts": len(app.state.auth.store.all()),
+        "stream_clients": len(app.state.stream.clients),
         "arena_models": app.state.arena.models(),
         "baselines": {"agents": len(app.state.detector.store.agents), "roles": len(app.state.detector.store.roles)},
         "llm": app.state.llm.status(),

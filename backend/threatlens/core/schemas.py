@@ -235,6 +235,7 @@ class ActionEvent(_Model):
     rule: str | None = None  # policy rule that produced the decision
     reason: str | None = None  # human-readable reason for the decision
     alert_id: str | None = None
+    score_ms: float | None = None  # time spent scoring this action (detection + fusion + response)
     label: str | None = None  # ground truth, replay/eval mode only
 
 

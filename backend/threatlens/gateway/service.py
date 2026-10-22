@@ -8,6 +8,7 @@ Lifecycle of one call (ARCHITECTURE.md §3):
 import base64
 import binascii
 import logging
+import time
 from typing import Any
 
 from pydantic import BaseModel
@@ -141,6 +142,7 @@ class Gateway:
 
         ctx = ScoringContext(claims=claims, agent=agent, contract=contract, session=session, action=resolved)
         score: ScoreResult | None
+        started = time.perf_counter()
         try:
             score = await self.scorer.score(event, ctx)
         except Exception:
@@ -164,6 +166,7 @@ class Gateway:
                 DecisionType.deny, "fail_closed",
                 "Detection is unavailable, so sensitive data is blocked until it recovers.")
 
+        event.score_ms = round((time.perf_counter() - started) * 1000, 3)
         if score:
             event.scores, event.risk, event.alert_id = score.scores, score.risk, score.alert_id
 

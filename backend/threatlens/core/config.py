@@ -27,9 +27,16 @@ class Settings(BaseSettings):
     downstream_token_ttl_s: int = 60
     analyst_token_ttl_s: int = 8 * 3600
 
-    # Operator access to management endpoints until analyst login lands (M10).
+    # Operator access for scripts and CI (X-Admin-Key). Analysts use the console login (M10).
     # Required in prod; optional in dev/test.
     admin_api_key: str | None = None
+
+    # Console analysts (M10). The demo account is created at startup if both are set.
+    demo_analyst_email: str | None = None
+    demo_analyst_password: str | None = None
+    # Rate limits per minute: per credential (or IP) for the API, per IP for login.
+    rate_limit_per_min: int = 600
+    auth_rate_limit_per_min: int = 20
 
     # Agents
     agent_mode: Literal["llm", "replay"] = "replay"
@@ -81,6 +88,8 @@ class Settings(BaseSettings):
     def _strong_key_in_prod(self) -> "Settings":
         if self.env == "prod" and (self.jwt_signing_key == DEV_JWT_KEY or len(self.jwt_signing_key) < 32):
             raise ValueError("JWT_SIGNING_KEY must be a random value of at least 32 characters in production")
+        if self.env == "prod" and "*" in self.cors_origin_list:
+            raise ValueError("CORS_ORIGINS must list the console's domain in production, not *")
         return self
 
 

@@ -6,7 +6,7 @@ from fastapi import APIRouter, Depends, HTTPException, Request
 from fastapi.responses import PlainTextResponse
 from pydantic import BaseModel, Field
 
-from threatlens.core.http import bearer_token, require_operator
+from threatlens.core.http import actor_for, bearer_token, require_operator
 from threatlens.core.schemas import Alert, AlertFeedback, Approval, ApprovalStatus, Decision, RoleAmendment
 from threatlens.core.security import InvalidToken
 from threatlens.identity import IdentityError, InvalidAmendment, UnknownAgent
@@ -58,7 +58,8 @@ def list_approvals(status: ApprovalStatus | None = None, o: ResponseOrchestrator
 async def decide_approval(approval_id: str, body: ApprovalDecisionIn, request: Request,
                           o: ResponseOrchestrator = Depends(orchestrator)):
     try:
-        return await o.approvals.decide(approval_id, body.approve, body.actor, request.app.state.gateway)
+        return await o.approvals.decide(approval_id, body.approve, actor_for(request, body.actor),
+                                        request.app.state.gateway)
     except ApprovalError as e:
         raise HTTPException(409 if "already" in str(e) else 404, str(e)) from e
 
@@ -81,17 +82,17 @@ def agent_approval_status(approval_id: str, request: Request, token: str = Depen
 
 
 @router.post("/agents/{agent_id}/containment", response_model=Decision, dependencies=operator)
-async def contain(agent_id: str, body: ContainmentIn, o: ResponseOrchestrator = Depends(orchestrator)):
+async def contain(agent_id: str, body: ContainmentIn, request: Request, o: ResponseOrchestrator = Depends(orchestrator)):
     try:
-        return await o.apply(agent_id, body.action, body.reason, body.actor)
+        return await o.apply(agent_id, body.action, body.reason, actor_for(request, body.actor))
     except UnknownAgent as e:
         raise HTTPException(404, "unknown agent") from e
 
 
 @router.post("/alerts/{alert_id}/feedback", response_model=FeedbackOut, dependencies=operator)
-async def feedback(alert_id: str, body: FeedbackIn, o: ResponseOrchestrator = Depends(orchestrator)):
+async def feedback(alert_id: str, body: FeedbackIn, request: Request, o: ResponseOrchestrator = Depends(orchestrator)):
     try:
-        return FeedbackOut(**await o.feedback(alert_id, body.feedback, body.actor, body.reason))
+        return FeedbackOut(**await o.feedback(alert_id, body.feedback, actor_for(request, body.actor), body.reason))
     except KeyError as e:
         raise HTTPException(404, "no such alert") from e
     except (NothingToAmend, InvalidAmendment) as e:

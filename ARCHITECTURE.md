@@ -536,10 +536,23 @@ How to read it honestly:
 
 ### M10 · API & Console Security
 
-- FastAPI app that mounts every module's router, the WebSocket hub `/v1/stream`, and `/enterprise`.
-- **Analyst auth (v1 auth layer, reused):** email + password → **Slider CAPTCHA** (server-verified drag trajectory) → **Isolation Forest login-anomaly** check (login hour, new device, failed attempts, CAPTCHA solve behavior) → JWT. An anomalous login is blocked from the console. Pitch line: *"we protect the humans who protect the agents."*
-- A **demo judge account** is seeded from `.env`, so judges can log in quickly.
-- CORS is locked to the Vercel domain, and there is per-token rate limiting.
+Code: `backend/threatlens/api/`. The FastAPI app mounts every module's router plus the pieces below.
+
+- **Analyst login** (`auth.py`, v1 auth layer): email + password → **Slider CAPTCHA** → **Isolation Forest login-anomaly** check → console JWT (8 h). *"We protect the humans who protect the agents"*: a stolen password alone doesn't get in.
+  - **Slider CAPTCHA** (`captcha.py`): a signed, single-use, two-minute challenge. The server checks that the piece landed on the gap (±6 px), the solve time (0.25–30 s), and that the drag moved like a hand: uneven speed or wobble off the line. A constant-speed, perfectly straight drag is rejected as scripted. The gap position is visible to the client, so this stops scripts by behaviour, and the anomaly model is the second line.
+  - **Login anomaly** (`anomaly.py`): a numpy Isolation Forest (no scikit-learn in 512 MB) over five features relative to the analyst: hours from their usual login time, new device, failed attempts in the last hour, CAPTCHA solve time and drag unevenness. It is fitted at startup on synthetic normal logins; the threshold is their 99.5th percentile. An anomalous login is **blocked with its reasons** (e.g. "a device this account has never used", "unusual time of day"). A new laptop alone passes; a new device at an unusual hour does not. First logins and accounts with < 5 logins have no usual hour, so they are judged on the rest.
+  - 5 failures in 15 minutes lock the account for 15 minutes. Unknown emails take the same password-hash time as real ones. Every attempt goes to `login_events`.
+  - The **demo account** is created at startup from `DEMO_ANALYST_EMAIL` / `DEMO_ANALYST_PASSWORD` (≥ 12 chars in prod), set in the Render dashboard and shared in the submission form, never in git. More analysts: `POST /v1/auth/analysts` (operator).
+- **Operator access:** every management route accepts the analyst JWT (`Authorization: Bearer`) or `X-Admin-Key` (scripts, CI). When an analyst acts (containment, approvals, alert feedback), the audit log records the signed-in analyst, not the `actor` the request body claims.
+- **Live stream** (`stream.py`): WebSocket `/v1/stream` pushes actions, alerts, containment changes, scanned content and arena progress. Browsers can't set WebSocket headers, so the first message authenticates (`{"token": "<analyst JWT>"}`); an unauthenticated socket is closed with 4401. Each client has a bounded queue, so a slow console never slows the gateway.
+- **Replay** (`replay.py`): `GET /v1/replay/{session_id}` returns a session step by step (scores, decisions), the content it read, its alerts and containment decisions. Recent sessions come from memory (works without a database); older ones from Atlas (7 days).
+- **Metrics** (`metrics.py`): Prometheus `/metrics` with decisions by type, a scoring-latency histogram, alerts, containment changes, agents by status, embedding-cache hits, stream clients and process RSS. Aggregate counts only, so a scraper needs no credentials.
+- **Rate limits** (`ratelimit.py`): 600/min per credential (or IP when anonymous) and 20/min per IP on `/v1/auth/*`, answered with 429 + `Retry-After`. CORS lists only `CORS_ORIGINS` (the Vercel domain; `*` is refused in prod), with no cookies.
+- **Shared-process ceilings** (ponytail notes in the code): rate-limit windows, used CAPTCHA ids and the stream hub live in one process. With more than one API instance they move to Redis and the event stream (PRODUCTION.md).
+
+**Live check** (Docker, 512 MB, MiniLM): the demo analyst logs in (login risk 0.43 against threshold 0.61), the JWT opens operator routes (401 without it), the socket streams A1 as it runs (actions, content scan, alert, containment), replay returns its 4 steps with the alert, the PDF and the containment decision, and `/metrics` reports them. RSS 295 MB.
+
+**Done when:** a judge logs in with the demo account, a scripted CAPTCHA and an anomalous login are refused with reasons, and the console's live feed, replay and metrics work. ✅ The live check above and `tests/api/test_console_security.py`.
 
 ### M11 · Web Experience
 
@@ -643,8 +656,9 @@ The `label` field exists only in replay/eval mode. Indexes: `events {agent_id, t
 | `GET` | `/v1/replay/{session_id}` | M10 | Full session for time-travel replay |
 | `GET` | `/v1/eval/latest` | M9 | Evaluation metrics |
 | `POST` | `/v1/auth/captcha` · `/v1/auth/login` | M10 | Slider CAPTCHA challenge · login |
+| `GET` | `/v1/auth/me` · `GET/POST /v1/auth/analysts` | M10 | Signed-in analyst · manage analysts (operator) |
 | `GET` | `/v1/health` | M10 | Health + warm-up + LLM provider status |
-| `GET` | `/metrics` | M10 | Prometheus metrics (decisions by tier, signal latency, cache hits) |
+| `GET` | `/metrics` | M10 | Prometheus metrics (decisions, scoring latency, cache hits, RSS) |
 | `GET` | `/v1/alerts/{id}/ocsf` | M6 | Alert as an OCSF event, ready for a SIEM |
 | `WS` | `/v1/stream` | M10 | Live events, scores, alerts, containment, arena progress |
 

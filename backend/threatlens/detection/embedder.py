@@ -73,9 +73,12 @@ class CachedEmbedder:
         self.inner, self.name, self.floor = inner, inner.name, inner.floor
         self._cache: OrderedDict[str, np.ndarray] = OrderedDict()
         self._size = size
+        self.hits = self.misses = 0  # for /metrics
 
     def embed(self, texts: list[str]) -> np.ndarray:
         missing = [t for t in dict.fromkeys(texts) if t not in self._cache]
+        self.misses += len(missing)
+        self.hits += len(texts) - len(missing)
         if missing:
             for t, v in zip(missing, self.inner.embed(missing)):
                 self._cache[t] = v
