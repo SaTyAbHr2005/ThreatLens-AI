@@ -28,6 +28,7 @@
 
 .top nav {
   display: flex;
+  align-items: center;
   gap: 28px;
 }
 
@@ -144,13 +145,13 @@ code {
 .call {
   padding: 12px 14px;
   border-left: 3px solid var(--paper-ink);
-  background: rgb(28 58 63 / 0.06);
+  background: rgb(var(--ink-rgb) / 0.06);
   font-size: var(--t-16);
   overflow-wrap: anywhere;
 }
 
 .call.ok {
-  border-color: #2f6e66;
+  border-color: var(--teal);
 }
 
 .pdf {
@@ -259,7 +260,7 @@ code {
 
 .checklist.ok li::before {
   content: '✓';
-  color: #2f6e66;
+  color: var(--teal);
   font-weight: 700;
 }
 
@@ -311,7 +312,7 @@ code {
 /* ------------------------------------------------ bands below the story */
 
 .band {
-  border-top: 1px solid rgb(28 58 63 / 0.18);
+  border-top: 1px solid rgb(var(--ink-rgb) / 0.18);
 }
 
 .band-in {
@@ -363,7 +364,7 @@ code {
 
 .signal-list li.on {
   border-color: var(--void);
-  background: rgb(28 58 63 / 0.05);
+  background: rgb(var(--ink-rgb) / 0.05);
 }
 
 .signal-list li.on span {
@@ -386,7 +387,7 @@ code {
 }
 
 .big-rosette .ring:nth-child(even) {
-  stroke: #2f6e66;
+  stroke: var(--teal);
 }
 
 .big-rosette .ring.on {
@@ -482,7 +483,7 @@ code {
 
 .stats > div {
   padding: 24px 24px 24px 0;
-  border-bottom: 1px solid rgb(28 58 63 / 0.18);
+  border-bottom: 1px solid rgb(var(--ink-rgb) / 0.18);
 }
 
 .stats dt {
@@ -515,7 +516,7 @@ code {
 .ablation td {
   text-align: left;
   padding: 12px 8px 12px 0;
-  border-bottom: 1px solid rgb(28 58 63 / 0.18);
+  border-bottom: 1px solid rgb(var(--ink-rgb) / 0.18);
 }
 
 .ablation thead th {
@@ -536,7 +537,7 @@ code {
   display: grid;
   gap: 32px;
   justify-items: start;
-  border-top: 1px solid rgb(28 58 63 / 0.18);
+  border-top: 1px solid rgb(var(--ink-rgb) / 0.18);
 }
 
 .quote {

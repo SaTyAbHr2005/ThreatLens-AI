@@ -66,6 +66,8 @@ Two grounds: **paper** (documents, landing) and **intaglio** (the console, deep 
 | Step-up | void 60% | partial VOID | cracked |
 | Isolate | void | full VOID | broken |
 
+**Light and dark.** A toggle (a half-inked seal, in the landing header, the console status strip and on the sign-in page) swaps the grounds: the landing goes to intaglio, the console to paper. Until someone picks one, each surface keeps its own ground. Paper objects stay paper in both: passports, the supplier PDF and dossiers. The new theme spreads out from the toggle as a widening circle (View Transitions, 700 ms); with reduced motion, or where the browser has no View Transitions, it switches instantly. The choice is saved in the browser and applied before the first paint. Theme values live in `design/tokens.css`.
+
 ### 2.2 Type
 
 | Family | License / source | Role |

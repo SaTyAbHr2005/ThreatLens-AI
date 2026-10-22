@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { NavLink, Route, Routes, useLocation, useNavigate } from 'react-router';
 import { gsap, reduced, useGSAP } from '../motion/gsap';
 import { Seal } from '../Seal';
+import { ThemeToggle } from '../ThemeToggle';
 import { type Agent, api, auth, type Health, useApi } from './api';
 import { startLive, stopLive, useLive } from './live';
 import Login from './Login';
@@ -175,6 +176,7 @@ function StatusStrip() {
       ))}
       {health && !health.llm.length && <span className="chip" title="Explanations use templates">LLM: templates</span>}
       <span className="strip-me">
+        <ThemeToggle base="dark" />
         {me.name ?? me.sub ?? 'Operator'}
         <button className="link" onClick={() => auth.set(null)}>Sign out</button>
       </span>

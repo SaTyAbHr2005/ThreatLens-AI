@@ -2,6 +2,7 @@ import { type FormEvent, useCallback, useEffect, useRef, useState } from 'react'
 import { gsap, reduced, useGSAP } from '../motion/gsap';
 import { ringPath, rosette } from '../passport/rosette';
 import { Seal } from '../Seal';
+import { ThemeToggle } from '../ThemeToggle';
 import { api, ApiError, auth } from './api';
 
 interface Challenge { token: string; target: number; track: number; piece: number; tolerance: number }
@@ -72,6 +73,7 @@ export default function Login() {
   const rings = rosette('analyst-console');
   return (
     <div ref={root} className="login">
+      <ThemeToggle base="dark" className="login-theme" />
       <svg className="login-seal" viewBox="-1.02 -1.02 2.04 2.04" aria-hidden>
         {rings.map((_, i) => <path key={i} d={ringPath(rings, i, 0, 200)} pathLength={1} strokeDasharray={1} />)}
       </svg>

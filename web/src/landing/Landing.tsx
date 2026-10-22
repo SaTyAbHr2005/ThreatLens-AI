@@ -6,6 +6,7 @@ import { countUp, gsap, reduced, ScrollTrigger, SplitText, stamp, useGSAP } from
 import { AgentPassport } from '../passport/AgentPassport';
 import { type Identity, ringPath, rosette, SIGNALS } from '../passport/rosette';
 import { Seal } from '../Seal';
+import { ThemeToggle } from '../ThemeToggle';
 import './landing.css';
 
 const AGENT: Identity = { name: 'procurement-agent', role: 'procurement', roleVersion: 3, owner: 'procurement-team@corp.example', status: 'active' };
@@ -110,6 +111,7 @@ export default function Landing() {
         <nav>
           <a href="#story" onClick={(e) => (e.preventDefault(), go('story'))}>How it works</a>
           <Link to="/console">Console</Link>
+          <ThemeToggle base="light" />
         </nav>
       </header>
 

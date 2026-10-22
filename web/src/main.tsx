@@ -6,9 +6,12 @@ import { lazy, StrictMode, Suspense } from 'react';
 import { createRoot } from 'react-dom/client';
 import { BrowserRouter, Route, Routes } from 'react-router';
 import Landing from './landing/Landing';
+import { applyStoredTheme } from './ThemeToggle';
 
 // The landing ships in the first bundle (no blank first paint); the console and three.js load on demand.
 const Console = lazy(() => import('./console/Console'));
+
+applyStoredTheme();
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>

@@ -16,6 +16,12 @@
   --void-on-dark: #e5545d;
   --uv: #7b5cff;
   --uv-ink: #e9f27a;
+  --ok: #7fd4b4;
+  --teal: #2f6e66;
+  --ink-rgb: 28 58 63; /* --paper-ink as channels, for tints */
+  --foil-hover: #cdd8f0;
+  --intaglio-hover: #213c43;
+  --solid-hover: #0f2629;
 
   --font-sans: 'Archivo Variable', 'Archivo', system-ui, sans-serif;
   --font-mrz: 'OCR-B', 'Courier Prime', ui-monospace, monospace;
@@ -36,4 +42,55 @@
   --lift: 0 1px 1px rgb(28 58 63 / 0.08), 0 14px 32px -12px rgb(28 58 63 / 0.35);
 
   --ease-ui: cubic-bezier(0.22, 0.61, 0.36, 1);
+}
+
+/* Theme switch (ThemeToggle). Until someone picks one, each surface keeps its own ground:
+   the landing on paper, the console on intaglio. Paper documents stay paper in both. */
+:root[data-theme='dark'] .landing {
+  --paper: #12262b;
+  --paper-deep: #1a3238;
+  --paper-ink: #e4ece6;
+  --paper-ink-soft: #9fbab3;
+  --ink-rgb: 228 236 230;
+  --teal: #7fc4b5;
+  --solid-hover: #ffffff;
+  --lift: 0 1px 1px rgb(0 0 0 / 0.3), 0 14px 32px -12px rgb(0 0 0 / 0.6);
+  color: var(--paper-ink); /* body's color resolved before these overrides */
+}
+
+:root[data-theme='dark'] .landing .pdf {
+  --paper-ink: #1c3a3f;
+  --paper-ink-soft: #46626a;
+  --ink-rgb: 28 58 63;
+  color: var(--paper-ink);
+}
+
+:root[data-theme='dark'] body:has(.landing) {
+  background: #12262b;
+}
+
+:root[data-theme='light'] .console {
+  --intaglio: #e3e9e2;
+  --intaglio-raised: #f2f5f0;
+  --intaglio-line: #c2cdc3;
+  --intaglio-hover: #d6ded5;
+  --guilloche: #46626a;
+  --guilloche-dim: #7b958f;
+  --text-on-dark: #1c3a3f;
+  --void-on-dark: #c8323c;
+  --foil: #3f5b9c;
+  --foil-hover: #344d86;
+  --ok: #1f7a5c;
+  --tarnish: #9a7618;
+}
+
+:root[data-theme='light'] body:has(.console) {
+  background: #e3e9e2;
+}
+
+/* The switch itself: ThemeToggle animates the new snapshot as a circle widening from the button. */
+::view-transition-old(root),
+::view-transition-new(root) {
+  animation: none;
+  mix-blend-mode: normal;
 }
