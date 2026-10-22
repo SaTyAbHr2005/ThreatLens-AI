@@ -23,6 +23,8 @@ services:
         sync: false # Atlas mongodb+srv:// connection string
       - key: CORS_ORIGINS
         sync: false # https://<project>.vercel.app
+      - key: CONSOLE_URL
+        sync: false # same Vercel URL; Discord alert links point here
       - key: GROQ_API_KEY
         sync: false
       - key: GEMINI_API_KEY
