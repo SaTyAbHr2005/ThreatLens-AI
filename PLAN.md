@@ -150,7 +150,7 @@ The module definitions, interfaces, and "done when" tests are in [ARCHITECTURE.m
 - [x] M4: all nine signals S0–S8 (S3 as a session profile), clean-only learning, baselines persisted to Atlas
 - [x] M5: logistic fusion + tripwire floors, drift score, factors/evidence, cause attribution, **counterfactual**, template + LLM narrative, alerts API
 - [x] M6: contain-first policy (Restrict / Step-up, isolate on certainty or 3 strikes), same-call containment, cascading revocation, auto-relax, Step-up approvals, analyst actions + amendments, audit log, dossier + OCSF, Discord
-- [ ] M8: mock enterprise + canaries, replay agents (all 4), LLM agent (procurement), scenarios **A1, A3, A5, A7, B1, B2**
+- [x] M8: mock enterprise (synthetic data, sandboxed sink), scenario runner A1–A7 + B1–B2 (all pass live), real-LLM A1 mode, Red Team test harness
 - [ ] M9: dataset generator, eval with ablation + **attribution accuracy**, CI regression suite
 - [ ] M10: REST + WebSocket, analyst JWT login, `/metrics`, `/v1/health`
 - [ ] M11: landing (hero passport + hijack story), console (Overview, Agents, Incidents, Simulate, Evaluation)
@@ -162,7 +162,7 @@ The module definitions, interfaces, and "done when" tests are in [ARCHITECTURE.m
 3. [ ] Content Forensics Lab with the UV lamp (M3 + M11)
 4. [x] LLM Susceptibility Arena (M7): live, 3–4 of 5 free models followed the hidden instruction
 5. [ ] Intel page in the Console (M7 fleet immunity, signatures and trend API are done)
-6. [ ] Red Team Studio (M8)
+6. [x] Red Team test harness (M8)
 7. [ ] A2 poisoned tool, A6 mimicry (S3 session profile is done)
 8. [ ] Forensic Replay page
 9. [ ] Slider CAPTCHA + login anomaly on the analyst console (v1 reuse)

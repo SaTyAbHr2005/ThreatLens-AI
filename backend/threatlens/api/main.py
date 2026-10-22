@@ -20,7 +20,8 @@ from threatlens.detection import (
 )
 from threatlens.fusion import FusionScorer, MemoryAlertStore, MongoAlertStore, Weights, attach_minute_sink
 from threatlens.fusion.router import router as alerts_router
-from threatlens.gateway import Catalog, Gateway, HttpToolConnector, UnconfiguredConnector, attach_mongo_sinks
+from threatlens.gateway import Catalog, Gateway, HttpToolConnector, attach_mongo_sinks
+from threatlens.sim import EnterpriseConnector, ExternalSink, ScenarioRunner, enterprise_router, sim_router
 from threatlens.gateway.router import router as gateway_router
 from threatlens.identity import MemoryRegistryStore, MongoRegistryStore, Registry
 from threatlens.identity.router import router as identity_router
@@ -86,13 +87,20 @@ async def lifespan(app: FastAPI):
     app.state.intel = IntelHub(app.state.registry, book)
     app.state.arena = Arena(app.state.llm, db=app.state.db if persist else None, bus=bus)
 
-    connector = HttpToolConnector(settings.tools_base_url) if settings.tools_base_url else UnconfiguredConnector()
+    # Real tools if TOOLS_BASE_URL is set; otherwise the in-process mock enterprise.
+    app.state.external_sink = ExternalSink()
+    if settings.tools_base_url:
+        connector = HttpToolConnector(settings.tools_base_url)
+    else:
+        connector = EnterpriseConnector(catalog, app.state.external_sink, settings)
     app.state.gateway = Gateway(
         app.state.registry, catalog, connector,
         scanner=ImmuneScanner(app.state.forensics, book), scorer=app.state.response, settings=settings,
     )
     app.state.gateway.approvals = app.state.response.approvals
     app.state.response.gateway = app.state.gateway
+    app.state.sim_runner = ScenarioRunner(app.state.registry, app.state.gateway, app.state.fusion,
+                                          app.state.external_sink, app.state.llm)
 
     unsubscribe = attach_mongo_sinks(bus, app.state.db) if persist else []
     unsubscribe.append(bus.subscribe(Topics.action_scored, app.state.detector.observe))
@@ -137,6 +145,8 @@ app.include_router(forensics_router)
 app.include_router(alerts_router)
 app.include_router(response_router)
 app.include_router(intel_router)
+app.include_router(enterprise_router)
+app.include_router(sim_router)
 
 
 @app.get("/v1/health")
@@ -151,7 +161,8 @@ async def health() -> dict:
         "roles": len(app.state.registry.roles()),
         "agents": len(app.state.registry.agents()),
         "tools": len(app.state.gateway.catalog.tools),
-        "tool_backend": "configured" if settings.tools_base_url else "not configured",
+        "tool_backend": settings.tools_base_url or "mock-enterprise",
+        "exfil_bytes_reached_sink": app.state.external_sink.total_bytes,  # should stay 0 under enforcement
         "content_scanner": "prompt_guard+heuristics" if app.state.forensics.prompt_guard else "heuristics",
         "embedder": app.state.detector.embedder.name,
         "fusion_weights": app.state.fusion.weights.source,
