@@ -3,13 +3,14 @@
 Fleet score per minute = 0.6 · highest agent drift + 0.4 · average agent drift:
 one badly drifting agent dominates, but a fleet-wide rise shows too.
 
-ponytail: live window in memory (6 h). Longer history comes from Atlas `agent_minutely`
-(90-day TTL), which the M5 sink already writes.
+ponytail: live window in memory (6 h), refilled from Atlas `agent_minutely` (90-day TTL,
+written by the M5 sink) at startup, so a restart or a free-tier sleep doesn't blank the chart.
 """
 
 from collections import OrderedDict
 from datetime import datetime, timedelta
 
+from threatlens.core.db import C
 from threatlens.core.schemas import ActionEvent, utcnow
 
 KEEP_MINUTES = 360
@@ -38,6 +39,13 @@ class TrendBook:
         cutoff = minute_of(utcnow()) - timedelta(minutes=KEEP_MINUTES)
         while series and next(iter(series)) < cutoff:
             series.popitem(last=False)
+
+    async def load(self, db) -> None:
+        cutoff = minute_of(utcnow()) - timedelta(minutes=KEEP_MINUTES)
+        async for d in db[C.agent_minutely].find({"minute": {"$gte": cutoff}}, {"_id": 0}).sort("minute", 1):
+            self._agents.setdefault(d["agent_id"], OrderedDict())[d["minute"]] = {
+                "max_risk": d.get("max_risk", 0.0), "count": d.get("count", 0),
+                "alerting": d.get("alerting", 0), "drift": d.get("drift", 0.0)}
 
     def query(self, minutes: int = 60) -> dict:
         end = minute_of(utcnow())

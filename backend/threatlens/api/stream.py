@@ -25,6 +25,7 @@ TOPICS = (Topics.action_scored, Topics.alert_raised, Topics.alert_updated, Topic
           Topics.content_scanned, Topics.arena_progress)
 QUEUE = 500
 AUTH_TIMEOUT_S = 5
+RECENT = 25  # actions replayed to a client that just connected
 
 
 def _json(payload) -> object:
@@ -50,6 +51,11 @@ class StreamHub:
             q.put_nowait(message)
 
 
+def recent_actions(replay, n: int = RECENT) -> list[dict]:
+    events = [e for steps in replay.sessions.values() for e in steps[-n:]]
+    return sorted(events, key=lambda e: e["ts"])[-n:]
+
+
 router = APIRouter()
 
 
@@ -69,6 +75,9 @@ async def stream(ws: WebSocket):
     q: asyncio.Queue = asyncio.Queue(QUEUE)
     hub.clients.add(q)
     await ws.send_text(json.dumps({"topic": "hello", "data": {"as": who, "topics": list(TOPICS)}}))
+    # The latest actions first, oldest to newest, so a reloaded console isn't an empty feed.
+    for event in recent_actions(ws.app.state.replay):
+        await ws.send_text(json.dumps({"topic": Topics.action_scored, "data": event}, default=str))
 
     async def drain_incoming():  # returns when the client leaves
         with contextlib.suppress(WebSocketDisconnect, RuntimeError):

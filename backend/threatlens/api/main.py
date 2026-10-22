@@ -33,6 +33,7 @@ from threatlens.evaluation.router import router as eval_router
 from threatlens.fusion.router import router as alerts_router
 from threatlens.gateway import Catalog, Gateway, HttpToolConnector, attach_mongo_sinks
 from threatlens.sim import EnterpriseConnector, ExternalSink, ScenarioRunner, enterprise_router, sim_router
+from threatlens.sim.ambient import AmbientTraffic
 from threatlens.gateway.router import router as gateway_router
 from threatlens.identity import MemoryRegistryStore, MongoRegistryStore, Registry
 from threatlens.identity.router import router as identity_router
@@ -97,6 +98,8 @@ async def lifespan(app: FastAPI):
     if db_ok:
         await book.load()
     app.state.intel = IntelHub(app.state.registry, book)
+    if db_ok:
+        await app.state.intel.trend.load(app.state.db)
     app.state.arena = Arena(app.state.llm, db=app.state.db if persist else None, bus=bus)
 
     # Real tools if TOOLS_BASE_URL is set; otherwise the in-process mock enterprise.
@@ -133,7 +136,13 @@ async def lifespan(app: FastAPI):
     if notifier:
         unsubscribe.append(bus.subscribe(Topics.containment_changed, notifier.on_decision))
     saver = asyncio.create_task(persist_periodically(app.state.db, baselines)) if db_ok else None
+    ambient = AmbientTraffic(app.state.registry, app.state.gateway, interval_s=settings.ambient_interval_s) \
+        if settings.ambient_traffic else None
+    if ambient:
+        ambient.start()
     yield
+    if ambient:
+        await ambient.stop()
     await bus.drain()
     for off in unsubscribe:
         off()

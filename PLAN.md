@@ -253,7 +253,7 @@ Work through the stretch list (§6) in order. **Each item must be demo-ready or 
 ### Phase 7: Polish & rehearse (last 8 hours) ⚠️ don't skip this
 
 - [ ] **Feature freeze 8 hours before the deadline**
-- [ ] Seed ~2 hours of normal history so charts look alive
+- [x] Seed normal history so charts look alive: routine in-role traffic (`AMBIENT_TRAFFIC`) through the real gateway, the chart refilled from Atlas after a restart, and the live feed replayed on connect. Turn the keep-warm ping on about 2 hours before judging so that much history has built up.
 - [ ] Lighthouse + reduced-motion + keyboard pass (DESIGN.md §8)
 - [ ] Record the **backup demo video**
 - [ ] Rehearse the demo **5+ times** with a timer, including a "Render is asleep" drill

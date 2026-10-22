@@ -245,12 +245,14 @@ Free tiers sleep when idle and have memory and rate limits. See [ARCHITECTURE.md
 | Variable | Purpose |
 |----------|---------|
 | `MONGO_URI` | MongoDB connection string |
+| `MONGO_DB` | Database name (default `threatlens`). Use a different one for local runs against the same cluster as the deploy, e.g. `threatlens_dev`: each environment signs Role Contracts with its own key, so sharing a database makes them look tampered to each other. |
 | `JWT_SIGNING_KEY` | Signs agent, downstream, and analyst tokens, and Role Contract versions |
 | `ADMIN_API_KEY` | Sent as `X-Admin-Key` by scripts and CI for operator routes (analysts use the console login instead). Required in production. Optional locally. |
 | `DEMO_ANALYST_EMAIL` · `DEMO_ANALYST_PASSWORD` | The demo console account, created at startup. Set them in the Render dashboard, never in git. |
 | `DEMO_ANALYST_PUBLIC` | `true` shows the demo account on the sign-in page with a *Fill in for me* button, for online evaluation. Visitors share it, so it locks out per IP and skips the usual-device and usual-hour checks; the slider CAPTCHA still applies. Default `false`. |
 | `RATE_LIMIT_PER_MIN` · `AUTH_RATE_LIMIT_PER_MIN` | Requests per minute per credential (default 600) and per IP on login (default 20) |
 | `AGENT_MODE` | `llm` or `replay` |
+| `AMBIENT_TRAFFIC` · `AMBIENT_INTERVAL_S` | `true` starts four routine agents (one per role) doing ordinary in-role work through the real gateway, one action about every 12 s, so the drift chart and live feed are never empty. They raise no alerts. An agent an analyst contains stays contained. Default `false`. |
 | `GROQ_API_KEY` · `GEMINI_API_KEY` · `OPENROUTER_API_KEY` | Free LLM providers (all optional) |
 | `GROQ_MODEL` · `GEMINI_MODEL` · `OPENROUTER_MODELS` | Model IDs. Free lineups change, so check each provider's console. |
 | `OLLAMA_URL` | Local LLM fallback |

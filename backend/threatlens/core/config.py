@@ -42,6 +42,9 @@ class Settings(BaseSettings):
 
     # Agents
     agent_mode: Literal["llm", "replay"] = "replay"
+    # Routine in-role work by four agents through the real gateway, so a fresh demo isn't empty.
+    ambient_traffic: bool = False
+    ambient_interval_s: float = 12.0
     roles_dir: Path = Path(__file__).resolve().parents[2] / "roles"  # backend/roles
     catalog_dir: Path = Path(__file__).resolve().parents[2] / "catalog"  # backend/catalog
     # Fitted risk-fusion weights (written by the evaluation lab, M9). Missing = hand-tuned defaults.
