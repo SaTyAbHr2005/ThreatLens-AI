@@ -9,6 +9,20 @@ services:
     ports:
       - "8000:8000"
 
+  # Landing + console with hot reload. Dependencies install inside the container, never on your machine.
+  web:
+    image: node:22-alpine
+    working_dir: /repo/web
+    command: sh -c "npm ci --no-audit --no-fund && npm run dev -- --host 0.0.0.0"
+    environment:
+      VITE_API_URL: http://localhost:8000
+    ports:
+      - "5173:5173"
+    volumes:
+      - ./web:/repo/web
+      - ./backend/catalog:/repo/backend/catalog:ro
+      - /repo/web/node_modules
+
   mongo:
     image: mongo:7
     profiles: [local-db]

@@ -1,0 +1,39 @@
+/* Design tokens: DESIGN.md §2. Two grounds: paper (landing, documents) and intaglio (console). */
+:root {
+  --paper: #dce3da;
+  --paper-deep: #cdd6cb;
+  --paper-ink: #1c3a3f;
+  --paper-ink-soft: #46626a;
+  --intaglio: #12262b;
+  --intaglio-raised: #1a3238;
+  --intaglio-line: #27454c;
+  --guilloche: #8db3aa;
+  --guilloche-dim: #6d918a;
+  --text-on-dark: #e4ece6;
+  --foil: #b9c7e8; /* flat fallback only; the real foil is a shader */
+  --tarnish: #c9a23a;
+  --void: #c8323c;
+  --void-on-dark: #e5545d;
+  --uv: #7b5cff;
+  --uv-ink: #e9f27a;
+
+  --font-sans: 'Archivo Variable', 'Archivo', system-ui, sans-serif;
+  --font-mrz: 'OCR-B', 'Courier Prime', ui-monospace, monospace;
+
+  /* Type scale, ratio 1.25 on 16px */
+  --t-13: 0.8125rem;
+  --t-16: 1rem;
+  --t-20: 1.25rem;
+  --t-25: 1.5625rem;
+  --t-31: 1.9375rem;
+  --t-39: 2.4375rem;
+  --t-49: 3.0625rem;
+  --t-61: 3.8125rem;
+  --t-76: 4.75rem;
+
+  --r-doc: 14px;
+  --r-ctl: 6px;
+  --lift: 0 1px 1px rgb(28 58 63 / 0.08), 0 14px 32px -12px rgb(28 58 63 / 0.35);
+
+  --ease-ui: cubic-bezier(0.22, 0.61, 0.36, 1);
+}

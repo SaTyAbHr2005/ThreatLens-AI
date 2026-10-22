@@ -18,3 +18,19 @@ jobs:
       - run: pip install ".[dev]"
       # Unit tests, the scenario suite (A1-A7, B1-B2) and the evaluation lab, all hermetic.
       - run: pytest -q
+
+  web:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: web
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+      - run: npm ci
+      # Type-checks against the generated API types, then builds the landing + console.
+      - run: npm run build

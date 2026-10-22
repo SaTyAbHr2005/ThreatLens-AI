@@ -39,7 +39,7 @@ Short version for the slide title: **"We don't just catch drift. We show what ca
 
 | Pillar | What it means | Proof judges *see* in the demo | Metric we report |
 |--------|---------------|-------------------------------|------------------|
-| **1. Causal Drift Attribution** | Every alert names the exact document, email, or tool output that triggered the drift. We decode its hidden instruction and show a counterfactual: *"without this PDF, risk would be 41"*. | The incident dossier shows `supplier_quote.pdf`, the UV-revealed hidden text, and the counterfactual line | **Attribution accuracy**: % of injection alerts whose top cause is the real poisoned item |
+| **1. Causal Drift Attribution** | Every alert names the exact document, email, or tool output that triggered the drift. We decode its hidden instruction and show a counterfactual: *"without this PDF, this action would score 77 instead of 100"*. | The incident dossier shows `supplier_quote.pdf`, the UV-revealed hidden text, and the counterfactual line | **Attribution accuracy**: % of injection alerts whose top cause is the real poisoned item |
 | **2. Day-zero, role-anchored detection** | Behavior is compared with the agent's **declared purpose** (Role Contract), not just its past. New and short-lived agents are protected immediately, and approved role changes don't raise alerts. | B2: a brand-new agent stays green. B1: an approved change, no alert. A1 is caught by the 2nd off-role action. | Time-to-detect (actions) · false alerts per 1k actions · B1/B2 false-alert rate |
 | **3. Contain, don't kill** | Graduated containment cuts only the capability outside the role. In-role work keeps running. | **0 bytes** reach the attacker, and the same agent then successfully creates a purchase request | Exfil bytes prevented · legit work preserved % |
 
@@ -153,19 +153,19 @@ The module definitions, interfaces, and "done when" tests are in [ARCHITECTURE.m
 - [x] M8: mock enterprise (synthetic data, sandboxed sink), scenario runner A1–A7 + B1–B2 (all pass live), real-LLM A1 mode, Red Team test harness
 - [x] M9: dataset generator (held-out variants), shadow + enforced passes, ablation at the production threshold and at matched FPR, **attribution accuracy** (100%), fitted vs hand-tuned weights, scenario regression suite in CI
 - [x] M10: analyst login (Slider CAPTCHA + Isolation Forest login anomaly + JWT), analyst-as-actor audit, WebSocket `/v1/stream`, `/v1/replay`, `/metrics`, rate limits, CORS lock
-- [ ] M11: landing (hero passport + hijack story), console (Overview, Agents, Incidents, Simulate, Evaluation)
+- [x] M11: landing (hero passport + hijack story), console (login, Overview, Agents, Incidents, Approvals, Simulate, Forensics, Intel, Arena, Replay, Evaluation)
 
 ### Stretch (in priority order)
 
-1. [ ] Approvals page in the Console (the M6 queue and API are done)
+1. [x] Approvals page in the Console
 2. [ ] Delegation + A4 chain hijack (M1/M4 S6)
-3. [ ] Content Forensics Lab with the UV lamp (M3 + M11)
+3. [x] Content Forensics Lab with the UV lamp (M3 + M11)
 4. [x] LLM Susceptibility Arena (M7): live, 3–4 of 5 free models followed the hidden instruction
-5. [ ] Intel page in the Console (M7 fleet immunity, signatures and trend API are done)
+5. [x] Intel page in the Console
 6. [x] Red Team test harness (M8)
 7. [ ] A2 poisoned tool, A6 mimicry (S3 session profile is done)
-8. [ ] Forensic Replay page
-9. [x] Slider CAPTCHA + login anomaly on the analyst console (v1 reuse; backend done, the console screen is M11)
+8. [x] Forensic Replay page
+9. [x] Slider CAPTCHA + login anomaly on the analyst console (v1 reuse)
 10. [ ] Incident Dossier PDF export, OCSF export, AI-drafted Role Contracts
 11. [ ] Locust load test numbers
 12. [ ] MCP proxy mode
@@ -200,7 +200,7 @@ Assumes **36–48 build hours**. For 24 hours, do only the MVP and drop Phase 6.
 | Backend | Repo layout, Dockerfile (the same image Render runs), Docker Compose (api, mongo), `render.yaml`, M0 schemas **frozen**, Mongo + TTL indexes, event bus, `/v1/health`. **Deploy the empty API to Render on day one** so deploy problems surface early. |
 | Backend | M1 Role Contract loader + JWT issue/verify + 4 contract YAMLs |
 | Sim | Mock enterprise sub-app, sensitivity-labeled file tree, external sink, **canary files** |
-| Frontend | Vite + TS + Tailwind v4 tokens, fonts, routing, console shell (rail + status strip), **mock WebSocket feed** from a recorded A1 JSON |
+| Frontend | Vite + TS + CSS tokens, fonts, routing, console shell (rail + status strip), **mock WebSocket feed** from a recorded A1 JSON |
 | ML | Port the v1 decoder + heuristics into M3, with Prompt Guard via Groq as the model score |
 | Frontend | **Deploy the console shell to Vercel on day one** (`web/vercel.json` SPA rewrite, `VITE_API_URL` pointing at Render) |
 
@@ -224,7 +224,7 @@ Assumes **36–48 build hours**. For 24 hours, do only the MVP and drop Phase 6.
 | ML | S1 (fastembed + per-role calibration + LRU cache), S2 (Markov + cohort λ), S4 (taint), S7 (anchored CUSUM) |
 | Backend | S0 runtime fingerprint, S5 sensitivity/egress + tripwire, S8 canary |
 | ML | M5 fusion (hand weights → trained logistic), drift score, factors, **counterfactual** |
-| Frontend | Overview page wired to the real API, drift chart (d3), live action feed |
+| Frontend | Overview page wired to the real API, drift chart (SVG), live action feed |
 
 **Exit:** offline A1 reaches ≥ Restrict within 3 malicious actions, with `supplier_quote.pdf` as the top-ranked cause. B1/B2 stay below Monitor.
 
@@ -234,7 +234,7 @@ Assumes **36–48 build hours**. For 24 hours, do only the MVP and drop Phase 6.
 |-------|-------|
 | Backend | M6 tiers + hysteresis, scope snap-back, `jti` revocation, analyst actions, Discord notify, `/metrics` |
 | ML | Narrative via router (Gemini → Groq → template), playbook recommendations |
-| Frontend | **Incident Dossier** (Flip open, factor bars, original vs decoded, counterfactual, stamps), Agents page with the 3D passport reacting to live drift + **ring clamp on Restrict** |
+| Frontend | **Incident Dossier** (unfolds from its row, factor bars, original vs decoded, counterfactual, stamps), Agents page with the 3D passport reacting to live drift + **ring clamp on Restrict** |
 
 **Exit:** live A1 → **0 bytes** at the external sink → the same agent's `erp.create_pr` succeeds → the dossier names the PDF.
 
@@ -281,12 +281,12 @@ With 3 people, merge Sim & eval into ML and have the backend lead own the Evalua
 | Time | Screen | Say | Pillar |
 |------|--------|-----|--------|
 | 0:00–0:20 | Landing hero: the passport shimmering | "AI agents now get their own credentials. When a hidden instruction hijacks one, its token stays valid, so every security check passes." | — |
-| 0:20–0:35 | Console Overview: 4 passports, all intact | "Each agent has a Role Contract, a declaration of its job. ThreatLens checks every action against it." | 2 |
+| 0:20–0:35 | Console Overview: the fleet's passports, all intact | "Each agent has a Role Contract, a declaration of its job. ThreatLens checks every action against it." | 2 |
 | 0:35–1:20 | Simulate → **Run the PDF attack** (key `1`) → Overview | "The procurement agent opens a supplier quote. Watch its seal." The passport tarnishes, then VOID shows through. "It's reading HR salary files. Its token is still valid. IAM sees nothing wrong." | 2 |
-| 1:20–2:00 | Incident Dossier opens (Flip) | "Risk 93, and here's *why*." UV-revealed hidden text. "It was this PDF. Here is the hidden instruction, decoded. Without this PDF, the risk would be 41." Point at the factor bars. | **1** |
-| 2:00–2:25 | Agents page: rings clamp inward | "We didn't kill the agent. We cut it back to its job. Zero bytes reached the attacker, and it's still creating purchase requests." Show `erp.create_pr` succeeding. *Isolated* stamp on the dossier. | **3** |
+| 1:20–2:00 | Incident Dossier unfolds from its row | "Risk 99.8, and here's *why*." Hidden vs decoded instruction. "It was this PDF. Here is the hidden instruction, decoded. Without this PDF, this read would score 77 instead of 100." Point at the factor bars. | **1** |
+| 2:00–2:25 | Agents page: rings clamp inward | "We didn't kill the agent. We cut it back to its job. Zero bytes reached the attacker, and it's still creating purchase requests." Show `erp.create_pr` succeeding. The agent is at step-up: risky actions wait in Approvals. | **3** |
 | 2:25–2:40 | Simulate → B1, then A7 | "An approved role change gets no alert. And if a hijacked agent tries to skip us and call a tool directly, the tool refuses." | 2 + production |
-| 2:40–3:00 | Evaluation page | "Across N attacks, IAM alone caught zero. ThreatLens caught X%, named the right cause Y% of the time, and kept Z% of legitimate work running." *(Real numbers only.)* "We don't just catch drift. We show what caused it, and we fix it without stopping the work." | all |
+| 2:40–3:00 | Evaluation page | "Across 120 attacks, IAM alone caught zero. ThreatLens caught 100%, named the right cause 100% of the time, and kept 100% of legitimate work running, on synthetic traffic." *(Real numbers from the results file.)* "We don't just catch drift. We show what caused it, and we fix it without stopping the work." | all |
 
 **If there's time, add (+20 s each):** the LLM Arena ("these 3 free models would have followed the instruction, this one refused"), or the Red Team Studio with a judge typing their own attack.
 

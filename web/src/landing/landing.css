@@ -1,0 +1,635 @@
+.landing {
+  min-height: 100vh;
+  overflow-x: clip;
+}
+
+.top {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 18px 24px;
+  background: linear-gradient(var(--paper) 70%, transparent);
+}
+
+.mark {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  font-weight: 700;
+  font-stretch: 115%;
+  text-decoration: none;
+  font-size: var(--t-20);
+}
+
+.top nav {
+  display: flex;
+  gap: 28px;
+}
+
+.top nav a {
+  text-decoration: none;
+  font-weight: 560;
+  background: linear-gradient(currentColor, currentColor) 0 100% / 0 1.5px no-repeat;
+  transition: background-size 240ms var(--ease-ui);
+}
+
+.top nav a:hover {
+  background-size: 100% 1.5px;
+}
+
+/* ------------------------------------------------ hero + story with the passport on a sticky stage */
+
+.dossier {
+  display: grid;
+  grid-template-columns: minmax(0, 6fr) minmax(0, 6fr);
+  gap: 48px;
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 24px;
+}
+
+.stage {
+  position: sticky;
+  top: 0;
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 16px;
+}
+
+.passport {
+  width: 100%;
+  aspect-ratio: 1.2;
+}
+
+.stage-caption {
+  text-align: center;
+  color: var(--paper-ink-soft);
+  font-size: var(--t-13);
+  min-height: 1.6em;
+}
+
+.hero {
+  min-height: calc(100vh - 80px);
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 28px;
+  padding-bottom: 64px;
+}
+
+.hero h1 {
+  font-size: clamp(var(--t-39), 6.2vw, var(--t-76));
+  max-width: 11ch;
+}
+
+.lede {
+  font-size: var(--t-20);
+  max-width: 34ch;
+  color: var(--paper-ink-soft);
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.story-title {
+  font-size: var(--t-39);
+  padding-top: 64px;
+}
+
+.step {
+  min-height: 92vh;
+  padding: 18vh 0 64px;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  max-width: 34rem;
+  position: relative;
+}
+
+.step h3 {
+  font-size: var(--t-31);
+  font-stretch: 112%;
+  font-weight: 720;
+  line-height: 1.1;
+  letter-spacing: -0.01em;
+}
+
+.step .n,
+.tier .n {
+  display: inline-grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  border: 1.5px solid currentColor;
+  border-radius: 50%;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+code {
+  font-family: var(--font-mrz);
+  font-size: 0.92em;
+}
+
+.call {
+  padding: 12px 14px;
+  border-left: 3px solid var(--paper-ink);
+  background: rgb(28 58 63 / 0.06);
+  font-size: var(--t-16);
+  overflow-wrap: anywhere;
+}
+
+.call.ok {
+  border-color: #2f6e66;
+}
+
+.pdf {
+  position: relative;
+  overflow: hidden;
+  background: #f7f8f4;
+  border-radius: var(--r-doc);
+  box-shadow: var(--lift);
+  padding: 22px 24px;
+  display: grid;
+  gap: 10px;
+  font-size: var(--t-13);
+}
+
+.pdf-head {
+  display: flex;
+  justify-content: space-between;
+  font-size: var(--t-16);
+  padding-bottom: 8px;
+  border-bottom: 1px solid #c7d0c6;
+}
+
+.pdf-row {
+  display: flex;
+  justify-content: space-between;
+}
+
+.pdf-row.total {
+  font-weight: 700;
+  border-top: 1px solid #c7d0c6;
+  padding-top: 8px;
+}
+
+.pdf-note {
+  color: #7a8a86;
+}
+
+/* UV lamp: a violet beam sweeps across (scroll-scrubbed via --lamp), the hidden ink fluoresces under it. */
+.uv-doc {
+  --lamp: 50%;
+}
+
+.hidden-ink {
+  position: relative;
+  z-index: 2;
+  color: var(--uv-ink);
+  font-size: var(--t-13);
+  text-shadow: 0 0 8px rgb(233 242 122 / 0.8);
+  mask-image: radial-gradient(ellipse 34% 140% at var(--lamp) 50%, #000 40%, transparent 72%);
+}
+
+.lamp {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 1;
+  background: radial-gradient(ellipse 30% 130% at var(--lamp) 50%, rgb(34 16 96 / 0.92), rgb(70 45 170 / 0.55) 48%, transparent 76%);
+}
+
+.decoded-label {
+  font-size: var(--t-13);
+  color: var(--paper-ink-soft);
+  margin-bottom: -10px;
+}
+
+.decoded {
+  font-size: var(--t-16);
+  color: var(--void);
+  min-height: 3em;
+}
+
+.versus {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+
+.versus > div {
+  border-top: 2px solid currentColor;
+  padding-top: 12px;
+}
+
+.versus h4 {
+  margin: 0 0 8px;
+  font-size: var(--t-16);
+}
+
+.checklist {
+  list-style: none;
+  padding: 0;
+  margin: 0 0 12px;
+  display: grid;
+  gap: 6px;
+  font-size: var(--t-13);
+}
+
+.checklist li {
+  position: relative;
+  padding-left: 22px;
+}
+
+.checklist li::before {
+  position: absolute;
+  left: 0;
+}
+
+.checklist.ok li::before {
+  content: '✓';
+  color: #2f6e66;
+  font-weight: 700;
+}
+
+.checklist.bad li::before {
+  content: '✕';
+  color: var(--void);
+  font-weight: 700;
+}
+
+.verdict {
+  font-weight: 700;
+}
+
+.verdict.void,
+.void {
+  color: var(--void);
+}
+
+.aside {
+  font-size: var(--t-13);
+  color: var(--paper-ink-soft);
+}
+
+/* Rubber stamp (DESIGN.md: stamps are the only loud thing besides passports) */
+.stamp {
+  align-self: flex-start;
+  display: inline-flex;
+  flex-direction: column;
+  padding: 10px 20px 8px;
+  border: 4px double var(--void);
+  border-radius: 8px;
+  color: var(--void);
+  font-weight: 820;
+  font-stretch: 125%;
+  font-size: var(--t-31);
+  line-height: 1;
+  transform: rotate(-8deg);
+  opacity: 0;
+  mix-blend-mode: multiply;
+}
+
+.stamp small {
+  font-size: var(--t-13);
+  font-weight: 600;
+  font-stretch: 100%;
+  margin-top: 4px;
+}
+
+/* ------------------------------------------------ bands below the story */
+
+.band {
+  border-top: 1px solid rgb(28 58 63 / 0.18);
+}
+
+.band-in {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 128px 24px;
+}
+
+.band h2 {
+  font-size: var(--t-49);
+  max-width: 16ch;
+  margin-bottom: 20px;
+}
+
+.band-in > p,
+.checks-copy > p,
+.contain > div > p {
+  max-width: 60ch;
+  color: var(--paper-ink-soft);
+}
+
+.checks .band-in {
+  display: grid;
+  grid-template-columns: minmax(0, 5fr) minmax(0, 7fr);
+  gap: 48px;
+  align-items: center;
+}
+
+.signal-list {
+  list-style: none;
+  padding: 0;
+  margin: 32px 0 0;
+  display: grid;
+  gap: 2px;
+}
+
+.signal-list li {
+  display: grid;
+  padding: 8px 12px;
+  border-left: 2px solid transparent;
+  transition: border-color 200ms var(--ease-ui), background-color 200ms var(--ease-ui);
+}
+
+.signal-list li span {
+  display: none;
+  color: var(--paper-ink-soft);
+  font-size: var(--t-13);
+}
+
+.signal-list li.on {
+  border-color: var(--void);
+  background: rgb(28 58 63 / 0.05);
+}
+
+.signal-list li.on span {
+  display: block;
+}
+
+.big-rosette {
+  width: 100%;
+  max-width: 620px;
+  justify-self: center;
+}
+
+.big-rosette .ring {
+  fill: none;
+  stroke: var(--paper-ink);
+  stroke-width: 0.0035;
+  opacity: 0.75;
+  cursor: pointer;
+  transition: stroke 200ms var(--ease-ui), stroke-width 200ms var(--ease-ui), opacity 200ms;
+}
+
+.big-rosette .ring:nth-child(even) {
+  stroke: #2f6e66;
+}
+
+.big-rosette .ring.on {
+  stroke: var(--void);
+  stroke-width: 0.007;
+  opacity: 1;
+}
+
+.big-rosette .ring:focus-visible {
+  outline: none;
+  stroke: var(--void);
+}
+
+.contain {
+  display: grid;
+  grid-template-columns: minmax(0, 5fr) minmax(0, 7fr);
+  gap: 48px;
+}
+
+.scale {
+  position: relative;
+  list-style: none;
+  padding: 0 0 0 28px;
+  margin: 0;
+  display: grid;
+  gap: 4px;
+  border-left: 2px solid var(--paper-ink);
+}
+
+.scale-marker {
+  position: absolute;
+  left: -9px;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: var(--paper);
+  border: 3px solid var(--void);
+  transform: translateY(-50%);
+}
+
+.tier {
+  display: grid;
+  grid-template-columns: 34px 1fr;
+  gap: 16px;
+  padding: 20px;
+  border-radius: 0;
+}
+
+.tier h3 {
+  font-size: var(--t-25);
+  font-stretch: 115%;
+  margin-bottom: 6px;
+}
+
+.tier h3 small {
+  font-size: var(--t-13);
+  font-weight: 500;
+  font-stretch: 100%;
+  color: var(--paper-ink-soft);
+  margin-left: 8px;
+}
+
+.tier p {
+  font-size: var(--t-13);
+}
+
+/* Tier encoding never relies on color alone: the pattern changes too (DESIGN.md §2.1). */
+.tier-1 {
+  background: repeating-linear-gradient(135deg, rgb(201 162 58 / 0.18) 0 1px, transparent 1px 14px);
+}
+
+.tier-2 {
+  background: repeating-linear-gradient(135deg, rgb(201 162 58 / 0.35) 0 1.5px, transparent 1.5px 6px);
+}
+
+.tier-3 {
+  background:
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='92' height='40'%3E%3Ctext x='4' y='26' font-family='sans-serif' font-weight='800' font-size='18' fill='%23C8323C' fill-opacity='.1' transform='rotate(-14 46 20)'%3EVOID%3C/text%3E%3C/svg%3E"),
+    repeating-linear-gradient(135deg, rgb(201 162 58 / 0.3) 0 1.5px, transparent 1.5px 6px);
+}
+
+.tier-4 {
+  background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='64' height='30'%3E%3Ctext x='2' y='21' font-family='sans-serif' font-weight='800' font-size='16' fill='%23C8323C' fill-opacity='.15' transform='rotate(-14 32 15)'%3EVOID%3C/text%3E%3C/svg%3E");
+}
+
+.stats {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0;
+  margin: 48px 0;
+  border-top: 2px solid var(--paper-ink);
+}
+
+.stats > div {
+  padding: 24px 24px 24px 0;
+  border-bottom: 1px solid rgb(28 58 63 / 0.18);
+}
+
+.stats dt {
+  font-size: var(--t-61);
+  font-weight: 760;
+  font-stretch: 125%;
+  letter-spacing: -0.02em;
+  line-height: 1;
+}
+
+.stats dd {
+  margin: 8px 0 0;
+  color: var(--paper-ink-soft);
+  max-width: 26ch;
+}
+
+.ablation {
+  width: 100%;
+  border-collapse: collapse;
+  margin-bottom: 16px;
+}
+
+.ablation caption {
+  text-align: left;
+  font-weight: 700;
+  padding-bottom: 12px;
+}
+
+.ablation th,
+.ablation td {
+  text-align: left;
+  padding: 12px 8px 12px 0;
+  border-bottom: 1px solid rgb(28 58 63 / 0.18);
+}
+
+.ablation thead th {
+  font-size: var(--t-13);
+  font-weight: 500;
+  color: var(--paper-ink-soft);
+}
+
+.ablation tr.us th,
+.ablation tr.us td {
+  font-weight: 760;
+}
+
+.close {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 160px 24px;
+  display: grid;
+  gap: 32px;
+  justify-items: start;
+  border-top: 1px solid rgb(28 58 63 / 0.18);
+}
+
+.quote {
+  font-size: clamp(var(--t-31), 4.4vw, var(--t-61));
+  font-weight: 760;
+  font-stretch: 125%;
+  letter-spacing: -0.02em;
+  line-height: 1.05;
+  max-width: 20ch;
+}
+
+.foot {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 24px;
+  display: flex;
+  justify-content: space-between;
+  font-size: var(--t-13);
+  color: var(--paper-ink-soft);
+}
+
+/* ------------------------------------------------ narrow screens: passport rides on top, story below */
+
+@media (max-width: 900px) {
+  .top {
+    padding: 12px 16px;
+  }
+
+  .mark {
+    font-size: var(--t-16);
+  }
+
+  .top nav {
+    gap: 16px;
+    white-space: nowrap;
+    font-size: 14px;
+  }
+
+  .dossier {
+    grid-template-columns: 1fr;
+    gap: 0;
+    padding: 0 16px;
+  }
+
+  .stage-caption {
+    margin: 0;
+  }
+
+  .stage {
+    grid-row: 1;
+    top: 56px;
+    height: auto;
+    z-index: 5;
+    padding: 8px 0;
+    background: var(--paper);
+  }
+
+  .passport {
+    aspect-ratio: 1.42;
+    max-width: 280px;
+    margin: 0 auto;
+    width: 100%;
+  }
+
+  .hero {
+    min-height: auto;
+    padding: 32px 0 64px;
+  }
+
+  .step {
+    min-height: 70vh;
+    padding-top: 8vh;
+  }
+
+  .versus,
+  .checks .band-in,
+  .contain {
+    grid-template-columns: 1fr;
+  }
+
+  .stats {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .stats dt {
+    font-size: var(--t-39);
+  }
+
+  .band-in {
+    padding: 80px 16px;
+  }
+
+  .band h2 {
+    font-size: var(--t-31);
+  }
+}

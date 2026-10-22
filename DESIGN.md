@@ -105,33 +105,35 @@ The same `<AgentPassport agent={…} drift={0–100} />` component is used in th
 
 | Layer | Technique |
 |-------|-----------|
-| Card body | `RoundedBox` (drei), paper material with grain normal map |
+| Card body | An extruded rounded rectangle (plain three.js, no React renderer), paper ground with security-wave background lines |
 | **Guilloche rosette** | A fragment shader on a plane draws 9 rings as sums of epitrochoids, `r(θ) = R + Σ aₖ·sin(kθ + φₖ)`. The coefficients come from the agent's **role vector** (a hash of the Role Contract embedding), so each agent's pattern is deterministic and unique. Ring *i* = signal S*i*. |
 | **Holographic foil** | A thin-film interference shader (view-angle → hue shift) masked to the seal area. It tilts with the pointer and device orientation. |
 | **Drift** | A `uDrift` uniform (0–1) does three things: adds noise displacement to the rosette (the lines lose register, like a misprinted banknote); lowers foil saturation toward `--tarnish`; and raises a threshold mask that reveals a **VOID** text pattern. |
 | **Per-signal emphasis** | A `uSignals[9]` uniform. A ring whose signal is firing thickens and shifts toward `--void`. This lets you *see* which signal caused the alert. |
 | **Containment** | On RESTRICT, the outer rings (capabilities beyond the role) **clamp inward** (GSAP on ring radii) while the inner role rings stay intact. This is "scope snap-back" made visible. |
-| Text | Agent name, role, and owner in Archivo. MRZ strip in OCR-B, rendered with `drei/Text` (troika). |
+| Text | Agent name, role, owner and status in Archivo, plus an MRZ strip with real ICAO 7-3-1 check digits, drawn once to a 2048 px canvas texture. The same drawing code renders the 2D fallback, so the poster and the WebGL card match. |
 
 ### 3.2 Performance rules
 
-- The canvas is lazy-loaded, and the three.js chunk is code-split away from first paint. A static WebP poster shows until the WebGL scene is ready.
+- The canvas is lazy-loaded, and the three.js chunk is code-split away from first paint. A 2D canvas poster of the same card (same rosette math) shows until the WebGL scene is ready.
 - DPR is clamped to `[1, 1.75]`. Rendering pauses when the passport is off-screen (`IntersectionObserver`) or the tab is hidden.
-- Mobile (< 768px) or low-power devices (`navigator.hardwareConcurrency ≤ 4` or a failed WebGL2 check) get a pre-rendered loop video or poster.
+- Mobile (< 768px) or low-power devices (`navigator.hardwareConcurrency ≤ 4` or a failed WebGL2 check) get the 2D canvas card, which still tarnishes, clamps and shows VOID as drift changes.
 - `prefers-reduced-motion`: no pointer tilt or idle animation. Drift changes are shown as instant state changes.
 
 ---
 
 ## 4. Motion system
 
-**Rule: one orchestrated moment per surface. Every other motion answers something the user did.**
+**Rule: one orchestrated moment per surface. Every other motion answers something that just happened: the user did something, or the system did.**
+
+Both surfaces move. The landing has the scroll story. The console's motion is feedback: pages slide in on navigation, list rows are dealt in when their data arrives, live actions arrive with a flash in their decision's color, numbers count up, chart lines draw themselves, passports tween when drift changes, stamps land on decisions, a dossier unfolds out of the row that opened it, and the login seal engraves itself once. Nothing loops while nothing is happening.
 
 | Library | Used for |
 |---------|----------|
 | **GSAP** + ScrollTrigger | The landing's pinned hijack story (scrubbed by scroll) |
 | GSAP **SplitText** | Hero headline reveal: the **one** load sequence, once |
 | GSAP **ScrambleText** | The decoded hidden instruction resolving under the UV lamp |
-| GSAP **Flip** | Opening an incident: the alert row expands into the full dossier |
+| GSAP core (clip-path) | Opening an incident: the dossier unfolds out of the alert row that was clicked. (Flip was tried first; scaling a one-line row into a multi-line headline distorted the text.) |
 | GSAP core | Passport uniforms (`uDrift`, ring clamps), the stamp landing |
 | **Lenis** | Smooth scroll on the **landing only**. The console uses native scrolling in its panes, because smooth-scroll fights inner scroll areas and data tables. |
 | `@gsap/react` (`useGSAP`) | Scoped animations with automatic cleanup in React |
@@ -147,12 +149,12 @@ gsap.ticker.lagSmoothing(0);
 
 **Easing and timing**
 - UI responses: `power3.out`, 180–260 ms.
-- Document transitions (Flip, stamp): `expo.inOut` 500–700 ms. The stamp uses a short overshoot plus a 2px "ink spread".
+- Document transitions (dossier unfold, stamp): `expo.inOut` 500–700 ms. The stamp uses a short overshoot plus a 2px "ink spread".
 - Drift on the passport: `uDrift` tweens over 900 ms with `power2.inOut`. Containment clamps use `back.out(1.4)`, so it feels like something snapped shut.
 
-**Banned:** fade-and-slide-up on every section, hover lift on every card, looping ambient animations in the console, parallax on text.
+**Banned:** fade-and-slide-up on every section, hover lift on every card, idle looping animations in the console (the live dot pulses once per event, never on a timer), parallax on text.
 
-`prefers-reduced-motion`: Lenis off, ScrollTrigger scenes become plain stacked sections with final states, ScrambleText shows the final text, and Flip becomes a crossfade.
+`prefers-reduced-motion`: Lenis off, ScrollTrigger scenes become plain stacked sections with final states, ScrambleText shows the final text, stamps appear without the drop, counters show their final values, and the dossier appears without unfolding.
 
 ---
 
@@ -182,10 +184,10 @@ Built on `--paper`. It reads like an official document that slowly gets compromi
 | # | Section | What happens |
 |---|---------|--------------|
 | — | **Hero** | Headline (SplitText reveal, the single load moment), a short paragraph, two actions. The passport tilts with the pointer and the foil shimmers. |
-| 1–5 | **How a hijack looks from the inside** *(pinned and scroll-scrubbed. This is a real sequence, so the steps are numbered.)* | The passport stays pinned on the right while the left column steps through: **1** The procurement agent opens `supplier_quote.pdf`. **2** A UV lamp sweeps the PDF and the hidden instruction fluoresces, then the text resolves via ScrambleText. **3** The agent reads `/hr/salaries.xlsx`. A side column titled *What IAM sees* shows every check passing, while the passport rosette loses register and the foil tarnishes. **4** It tries to upload to `quote-verify.io`. The VOID pattern breaks through, and an *Isolated* stamp lands. **5** The outer rings clamp inward and the agent goes on creating a purchase request. *"Scope cut back to its role. Work continues."* |
+| 1–5 | **How a hijack looks from the inside** *(pinned and scroll-scrubbed. This is a real sequence, so the steps are numbered.)* | The passport stays pinned on the right while the left column steps through: **1** The procurement agent opens `supplier_quote.pdf`. **2** A UV lamp sweeps the PDF and the hidden instruction fluoresces, then the text resolves via ScrambleText. **3** The agent reads `/hr/salaries.xlsx`. A side column titled *What IAM sees* shows every check passing, while the passport rosette loses register and the foil tarnishes. **4** It tries to upload to `quote-verify.io`. The upload is blocked on the same call (0 bytes leave), the VOID pattern breaks through, and a *Contained · step-up* stamp lands. (This matches what the real system does on A1: risk 99.8, contained at step-up, not isolated.) **5** The outer rings clamp inward and the agent goes on creating a purchase request. *"Scope cut back to its role. Work continues."* |
 | — | **Nine checks on every action** | The rosette is shown flat and large. Hovering or focusing a ring highlights it and shows that signal's plain-language question ("Does this action fit the agent's job?"). The rings *are* the list of signals, so there's no card grid. |
 | 1–4 | **Contain the agent, keep the work** *(the tiers are an ordered scale, so they're numbered)* | Monitor → Restrict → Step-up → Isolate, as a vertical scale. Each tier shows what still works and what doesn't. |
-| — | **Measured on 20,000 simulated actions** | Real numbers from `eval/results/latest.json`. If the file doesn't exist yet, the section reads *"Evaluation in progress"*. It never shows placeholder numbers. |
+| — | **Measured on N simulated sessions** | Real numbers from `backend/catalog/eval_results.json`, bundled at build time so they show while the API is still waking up. N and every figure come from the file. It never shows placeholder numbers. |
 | — | **Close** | *"Agents carry passports. ThreatLens watches the hologram."* Button: **Open the console**. |
 
 Copy rules: plain verbs, sentence case, the user's vocabulary ("the agent read salary files"), not system vocabulary ("S1 exceeded threshold"). Buttons say exactly what happens: **Run the PDF attack**, **Isolate agent**, **Release agent**, **Approve this change**.
@@ -217,7 +219,7 @@ The nav is **not numbered**, because these pages are not a sequence.
 
 | Page | What it shows | Interaction highlights |
 |------|---------------|------------------------|
-| **Overview** | Mini passports (2D canvas rosette, not WebGL, to keep it light), fleet drift chart, live action feed, open incidents | Clicking an incident opens the dossier with Flip. Keyboard: `g o` goes to Overview. |
+| **Overview** | Mini passports (2D canvas rosette, not WebGL, to keep it light), fleet drift chart, live action feed, open incidents | Clicking an incident opens its dossier. Keyboard: `g` then a letter goes to any page (`g o` Overview). |
 | **Agents** | One full **3D passport** per selected agent. Role Contract next to observed behavior ("declared vs actual" resources), drift history, token lineage, active amendments | **Approve this change** turns observed behavior into a signed amendment |
 | **Incidents** | **Incident Dossier** on `--paper`: plain-language headline, factor bars (each bar is labeled with its signal *and* its evidence), the hidden instruction (original next to decoded), causal timeline, counterfactual line, framework references, actions taken | Isolate / Release / Mark as harmless land as **stamps**. *Export report* downloads a PDF/Markdown dossier. |
 | **Approvals** | Held STEP-UP actions: who, what resource, why it's held | Approve / Deny with a stamp. Keyboard `a` / `d`. |
@@ -226,9 +228,9 @@ The nav is **not numbered**, because these pages are not a sequence.
 | **Intel** | Fleet threat trend, injection signature feed, "known signature" hits (fleet immunity), top techniques and destinations | Clicking a signature lists every agent that read it |
 | **Arena** | LLM Susceptibility Arena: one row per free model (Groq, Gemini, OpenRouter, Ollama). Shows whether it followed the hidden instruction, what it tried, and how fast. | **Run against all models** streams results live over WebSocket |
 | **Replay** | Forensic time-travel: pick a session and scrub a timeline. The passport and scores rewind with it. | Scrubbing is the user's action, so motion follows it directly |
-| **Evaluation** | Ablation table, per-scenario detection, false alerts per 1k actions, legit work preserved, latency | Read-only. Numbers come from `eval/results/latest.json` |
+| **Evaluation** | Ablation table, per-scenario detection, false alerts per 1k actions, legit work preserved, latency | Read-only. Numbers come from `GET /v1/eval/latest` |
 
-**Status strip** (always visible): fleet seal count, gateway state (*Warm* / *Waking up, about 30 s*), each LLM provider's status, and a ⌘K command palette (cmdk) for every action.
+**Status strip** (always visible): fleet seal count, gateway state (*Warm* / *Waking up, about 30 s*), each LLM provider's status, and a ⌘K command palette for every action.
 
 **Empty and error states give direction:**
 - No incidents: *"No incidents. Run the PDF attack from Simulate to see one."*
@@ -244,16 +246,15 @@ The nav is **not numbered**, because these pages are not a sequence.
 | Concern | Library |
 |---------|---------|
 | App | React 19 + Vite + TypeScript, React Router |
-| Styling | Tailwind CSS v4 (tokens defined as CSS variables in `@theme`) |
-| 3D | `three`, `@react-three/fiber`, `@react-three/drei`, `@react-three/postprocessing` (used sparingly: one subtle bloom on the foil only) |
-| Motion | `gsap` (ScrollTrigger, SplitText, ScrambleText, Flip, CustomEase), `@gsap/react`, `lenis` |
-| Data | `@tanstack/react-query` (REST), native `WebSocket` + `zustand` store for the live stream |
-| Charts | `d3-scale` + `d3-shape` with hand-built SVG, so charts match the system instead of looking like a chart library's defaults |
-| Graph | `d3-force` + SVG for the delegation graph (2D, because clarity matters more than spectacle here) |
-| Command palette | `cmdk` |
-| Icons | A small custom set drawn in the guilloche line style (seal, stamp, lamp, passport, chain). `@phosphor-icons/react` at *thin* weight as a fallback. |
-| Fonts | `@fontsource-variable/archivo`, self-hosted OCR-B |
-| Hosting | Vercel Hobby (static Vite build + SPA rewrite) |
+| Styling | Plain CSS with the tokens as custom properties (`src/design/tokens.css`). No utility framework: the design has few repeated patterns and many one-off documents. |
+| 3D | `three` directly, in one lazy-loaded module (`passport3d.ts`). One card and one shader: a React renderer and helper library would add weight without removing code. |
+| Motion | `gsap` (ScrollTrigger, SplitText, ScrambleText), `@gsap/react`, `lenis` |
+| Data | `fetch` with a small polling hook for REST, native `WebSocket` + a `useSyncExternalStore` store for the live stream |
+| Charts | Hand-built SVG, so charts match the system instead of looking like a chart library's defaults |
+| Command palette | Hand-built (⌘K / Ctrl+K) |
+| Icons | A small custom set drawn in the guilloche line style (the seal) |
+| Fonts | `@fontsource-variable/archivo` (width axis), `@fontsource/courier-prime` for MRZ strings. The CSS asks for OCR-B first, so an installed or self-hosted OCR-B takes over. |
+| Hosting | Vercel Hobby (static Vite build + SPA rewrite in `web/vercel.json`) |
 
 GSAP and all its plugins (SplitText, ScrambleText, Flip, and the rest) are free to use, including commercially.
 
@@ -262,21 +263,21 @@ GSAP and all its plugins (SplitText, ScrambleText, Flip, and the rest) are free 
 ```
 web/
 ├── src/
-│   ├── design/          # tokens.css, type.css, grain.webp
-│   ├── three/           # AgentPassport, guilloche.frag, foil.frag, uvLamp.frag
-│   ├── motion/          # lenis.ts, scroll scenes, stamp, flip helpers
-│   ├── landing/         # Hero, HijackStory, SignalRosette, ContainmentScale, Results
+│   ├── design/          # tokens.css, base.css (grain, buttons, focus)
+│   ├── passport/        # rosette.ts (shared math, 2D card, MRZ), passport3d.ts (WebGL), AgentPassport.tsx
+│   ├── motion/          # gsap.ts: plugins, stamp, count-up, deal-in, draw-in
+│   ├── landing/         # Landing.tsx: hero, hijack story, nine checks, containment scale, results
 │   ├── console/
-│   │   ├── shell/       # Rail, StatusStrip, CommandPalette
-│   │   ├── overview/ agents/ incidents/ approvals/ simulate/
-│   │   ├── forensics/ intel/ arena/ replay/ evaluation/
-│   │   └── auth/        # Login, SliderCaptcha
-│   ├── api/             # REST client, WebSocket store, types generated from OpenAPI
+│   │   ├── Console.tsx  # auth gate, rail, status strip, command palette, keyboard
+│   │   ├── Login.tsx    # email + password + Slider CAPTCHA
+│   │   ├── api.ts, live.ts, ui.tsx
+│   │   └── pages/       # Overview, Agents, Incidents, Approvals, Simulate, Forensics, Intel, Arena, Replay, Evaluation
+│   ├── api/schema.d.ts  # generated from the FastAPI OpenAPI schema
 │   └── main.tsx
-└── public/posters/      # static fallbacks for 3D scenes
+└── vercel.json
 ```
 
-Types are generated from the FastAPI OpenAPI schema (`openapi-typescript`), so the frontend and backend share one contract.
+Types are generated from the FastAPI OpenAPI schema (`npm run types`, using `openapi-typescript`), so the frontend and backend share one contract.
 
 ---
 

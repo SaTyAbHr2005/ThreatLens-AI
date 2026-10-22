@@ -27,7 +27,7 @@ Existing tools see **either** the malicious content (prompt filters) **or** the 
 
 | Pillar | What it does | What you see |
 |--------|--------------|--------------|
-| **Causal Drift Attribution** | Ties every behavior change to the document, email, or tool output that caused it. Decodes the hidden instruction and shows a counterfactual. | *"Caused by supplier_quote.pdf. Hidden instruction decoded. Without it, risk would be 41."* |
+| **Causal Drift Attribution** | Ties every behavior change to the document, email, or tool output that caused it. Decodes the hidden instruction and shows a counterfactual. | *"Caused by supplier_quote.pdf. Hidden instruction decoded. Without it, this action would score 77 instead of 100."* |
 | **Day-zero, role-anchored detection** | Compares behavior with the agent's declared **Role Contract**, so new and short-lived agents are protected from their first action. Approved changes don't raise alerts. | A brand-new agent stays green. A hijacked one is caught on its 2nd off-role action. |
 | **Contain, don't kill** | Graduated containment removes only what's outside the role. In-role work keeps running. | 0 bytes reach the attacker, and the agent still creates purchase requests. |
 
@@ -99,7 +99,7 @@ The system is split into 12 modules (M0–M11) with clear interfaces. See [ARCHI
 
 ## Interface
 
-The design language comes from **security documents**. Each agent has a passport whose guilloche rosette is generated from its Role Contract, with one ring per detection signal. The holographic seal **tarnishes and shows VOID** as the agent drifts. A UV lamp reveals hidden instructions inside documents, and analyst decisions land as stamps. Built with three.js (React Three Fiber), GSAP, and Lenis. See [DESIGN.md](DESIGN.md).
+The design language comes from **security documents**. Each agent has a passport whose guilloche rosette is generated from its Role Contract, with one ring per detection signal. The holographic seal **tarnishes and shows VOID** as the agent drifts. A UV lamp reveals hidden instructions inside documents, and analyst decisions land as stamps. Built with three.js, GSAP, and Lenis. See [DESIGN.md](DESIGN.md).
 
 ## Tech stack ($0)
 
@@ -109,7 +109,7 @@ The design language comes from **security documents**. Each agent has a passport
 | ML | Llama Prompt Guard 2 (Groq API), pdfminer.six, BeautifulSoup, fastembed (ONNX MiniLM), numpy. No torch. | Inside the Render service |
 | LLMs | Router across **Groq**, **Gemini**, **OpenRouter** free models, **Ollama** | Free tiers / local |
 | Database | MongoDB | **MongoDB Atlas M0** |
-| Frontend | React, Vite, TypeScript, Tailwind v4, three.js / R3F, GSAP, Lenis, d3, cmdk | **Vercel** Hobby |
+| Frontend | React, Vite, TypeScript, three.js, GSAP, Lenis | **Vercel** Hobby |
 | Ops | GitHub Actions, cron-job.org, Discord webhook, Resend, Locust | Free |
 
 No LLM sits in the detection path. LLMs only drive simulated agents, write alert summaries, and run the arena. Detection keeps working when every free LLM tier is rate-limited.
@@ -172,8 +172,10 @@ curl http://localhost:8000/v1/health
 | Service | URL |
 |---------|-----|
 | API + interactive docs | http://localhost:8000/docs |
-| Landing + console *(coming, M11)* | http://localhost:5173 |
+| Landing + console | http://localhost:5173 |
 | Mock enterprise | http://localhost:8000/enterprise |
+
+To sign in to the console, set `DEMO_ANALYST_EMAIL` and `DEMO_ANALYST_PASSWORD` in `.env` before starting. The account is created at startup.
 
 **No Atlas or no internet?** Run `docker compose --profile local-db up --build` and set `MONGO_URI=mongodb://mongo:27017` in `.env`.
 
@@ -188,6 +190,14 @@ docker run --rm -v "${PWD}/backend:/app" -w /app python:3.11-slim sh -c "pip ins
 ```
 
 The database test that needs a real cluster is skipped unless you pass `-e MONGO_TEST_URI=<atlas test db uri>`.
+
+Type-check and build the web app in a throwaway Node container (it reads the evaluation results from `backend/catalog`):
+
+```bash
+docker run --rm -v "${PWD}:/repo" -w /repo/web node:22-alpine sh -c "npm ci && npm run build"
+```
+
+After an API change, regenerate the frontend's types from a running API with `npm run types` (same container, `VITE_API_URL` pointing at it).
 
 Run the headline attack:
 
@@ -218,6 +228,7 @@ The web app is deployed on **Vercel** and the API on **Render**. Data lives in M
 **3. Frontend (Vercel)**
 - Import the repo in Vercel and set the **Root Directory** to `web`. The Vite preset is detected automatically.
 - Set `VITE_API_URL=https://<service>.onrender.com` and `VITE_WS_URL=wss://<service>.onrender.com/v1/stream`.
+- `web/vercel.json` rewrites deep links such as `/console/incidents/<id>` to the app. The landing's evaluation numbers are bundled from `backend/catalog/eval_results.json`, so keep Vercel's default of including files outside the root directory.
 - Deploy. Then set `CORS_ORIGINS` on Render to your `https://<project>.vercel.app` URL.
 
 **4. Keep warm during judging**

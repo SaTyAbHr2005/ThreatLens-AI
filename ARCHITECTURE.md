@@ -556,9 +556,18 @@ Code: `backend/threatlens/api/`. The FastAPI app mounts every module's router pl
 
 ### M11 · Web Experience
 
-Two surfaces with one design system based on security-document craft: guilloche, holographic foil, UV ink, and tamper-evident VOID seals. The full spec is in **[DESIGN.md](DESIGN.md)**.
-- **Landing (`/`)**: a scroll-driven hijack story built around a three.js **Agent Passport**. Its holographic seal tarnishes and shows VOID as the agent drifts. GSAP ScrollTrigger drives the story, and Lenis provides smooth scroll.
-- **Console (`/console`)**: Overview · Agents (3D passports) · Incidents (dossiers with stamps) · Approvals · Simulate (scenarios + Red Team Studio) · Forensics (UV lamp lab) · Intel · Arena · Replay · Evaluation.
+Code: `web/`. Two surfaces with one design system based on security-document craft: guilloche, holographic foil, UV ink, and tamper-evident VOID seals. The full spec is in **[DESIGN.md](DESIGN.md)**.
+
+- **Agent Passport** (`src/passport/`): one rosette function drives three renderers. The WebGL card (`passport3d.ts`, plain three.js, lazy-loaded) draws nine rings in a fragment shader in two printing plates; drift pulls the plates out of register, dulls the thin-film foil to tarnish and prints a VOID pattern through the seal; firing signals thicken their ring in red; containment clamps the outer rings (S5–S8, capabilities beyond the role) inward with `back.out`. The same math draws the 2D card used for mini passports, replay on phones, and the poster shown until WebGL is ready. The MRZ strip uses real ICAO 7-3-1 check digits, so it changes when the status does.
+- **Landing (`/`)**: the hero headline sets line by line (SplitText, the one load moment). The A1 story is scroll-driven with Lenis + ScrollTrigger while the passport stays on a sticky stage: the PDF, a UV lamp sweep scrubbed by scroll with the decoded instruction resolving (ScrambleText), *What IAM sees* vs *What ThreatLens sees*, the upload blocked with a *Contained* stamp, then the ring clamp while the purchase request goes through. Every number matches what the system does on A1 (risk 99.8, counterfactual 77, step-up, 0 bytes). Below: the nine rings as focusable buttons with each signal's plain question, the containment scale, and the measured results, bundled from `backend/catalog/eval_results.json` so they show while the API wakes up.
+- **Console (`/console`)**: login (email + password + Slider CAPTCHA, a blocked login shows its reasons), then Overview (mini passports, drift chart, live feed, open incidents), Agents (3D passport, declared vs observed tools, containment history), Incidents (a paper dossier that unfolds out of its row: factor bars with evidence, hidden vs decoded instruction, timeline, counterfactual, frameworks; Isolate / Release / Confirm / Mark as harmless / Approve this change land as stamps; Markdown export), Approvals (`a` / `d`), Simulate (scenarios on keys `1`–`9`, Red Team Studio), Forensics (a UV lamp follows the pointer and the hidden text fluoresces under it), Intel, Arena, Replay (a scrubber rewinds the passport and the nine scores), and Evaluation. A status strip shows the fleet seal count, gateway warm/waking, live-stream state and each LLM provider. ⌘K opens a command palette; `g` then a letter jumps to a page.
+- **Motion in the console** answers events: pages slide in, rows are dealt in when data arrives, live actions flash in their decision's color, numbers count up, chart lines draw, passports tween, stamps land. Nothing loops while idle. `prefers-reduced-motion` turns all of it into instant state changes.
+- **Contract with the API:** `src/api/schema.d.ts` is generated from the FastAPI OpenAPI schema (`npm run types`); responses are typed from it, and CI fails the web build if the frontend no longer matches.
+- **Budget:** the landing's first load is about 150 KB of gzipped JS (React, router, GSAP, the landing). three.js (126 KB gz) and the console load only when needed.
+
+**Live check** (built bundle served with an SPA fallback, API in a 512 MB container): the landing's story drives the WebGL passport through all five states (clean → tarnish → VOID + step-up → clamp); the real slider refused an automated drag ("too few movement samples"); A1 fired from key `1` passed its five checks; the dossier opened with the PDF named and the counterfactual; *Isolate agent* landed its stamp and the agent showed as isolated; the Forensics lamp revealed a Unicode-tag instruction (injection 90); replay rewound a session from VOID back to a clean seal; at 375 px wide the landing uses the 2D card with no sideways scroll.
+
+**Done when:** a judge can watch the hijack on the landing without the API, sign in, run the PDF attack, open its dossier, contain the agent, and see the numbers. ✅ The live check above; `npm run build` in CI.
 
 ---
 
@@ -675,7 +684,7 @@ The `label` field exists only in replay/eval mode. Indexes: `events {agent_id, t
 | PDF/HTML parsing | pypdf / pdfplumber, BeautifulSoup | Hidden-text extraction |
 | LLMs | **Groq** (gpt-oss, Qwen), **Google Gemini** (Flash-Lite), **OpenRouter** free models (MiniMax, Nemotron), **Ollama** (local) | All free tiers. Router with fallback (§9) |
 | Auth | PyJWT, argon2-cffi | Agent + analyst tokens |
-| Frontend | React + Vite + TypeScript, Tailwind CSS v4, **three.js** via React Three Fiber + drei + postprocessing, **GSAP** (ScrollTrigger, SplitText, ScrambleText, Flip), **Lenis**, Zustand, TanStack Query, d3-scale/d3-shape, cmdk | See DESIGN.md |
+| Frontend | React + Vite + TypeScript, plain CSS tokens, **three.js** (one lazy-loaded shader card), **GSAP** (ScrollTrigger, SplitText, ScrambleText), **Lenis**, hand-built SVG charts, types generated from OpenAPI | See DESIGN.md |
 | Database | **MongoDB Atlas M0** | Free forever, 512 MB |
 | Hosting | **Vercel** Hobby (web) · **Render** free web service (API, Docker runtime) · MongoDB Atlas M0 (data) | All $0 |
 | Ops | GitHub Actions (CI), cron-job.org / UptimeRobot (keep-warm), Discord webhook / Resend free (alerts), Sentry free (optional) | All $0 |
