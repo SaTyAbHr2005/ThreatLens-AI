@@ -58,9 +58,12 @@ class GatewayResult(BaseModel):
 
 
 class ToolCallFailed(Exception):
-    def __init__(self, event_id: str, error: ToolError):
+    """The call was allowed and scored, but the tool itself failed. Carries the gateway's verdict."""
+
+    def __init__(self, result: "GatewayResult", error: ToolError):
         super().__init__(str(error))
-        self.event_id = event_id
+        self.result = result
+        self.event_id = result.event_id
         self.status = error.status
 
 
@@ -172,7 +175,7 @@ class Gateway:
                     out = await self.connector.call(tool, args, downstream)
                 except ToolError as e:
                     event.reason = f"Tool failed: {e}"
-                    raise ToolCallFailed(event.id, e) from e
+                    raise ToolCallFailed(result, e) from e
                 event.action.bytes_in = out.bytes
                 result.result = out.data
                 if resolved.untrusted_output and (out.text or out.raw_b64):

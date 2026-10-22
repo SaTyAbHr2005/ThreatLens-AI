@@ -148,7 +148,7 @@ The module definitions, interfaces, and "done when" tests are in [ARCHITECTURE.m
 - [ ] M2: gateway, SDK, **downstream token exchange (A7)**, shadow mode, fail modes
 - [x] M3: hidden-text PDF/HTML/email extraction, v1 decoder, Prompt Guard (Groq) + agent-directed-instruction heuristics, phishing + URL risk, Forensics Lab API
 - [x] M4: all nine signals S0–S8 (S3 as a session profile), clean-only learning, baselines persisted to Atlas
-- [ ] M5: logistic fusion + tripwires, drift score, factors/evidence, **counterfactual**, template + LLM narrative
+- [x] M5: logistic fusion + tripwire floors, drift score, factors/evidence, cause attribution, **counterfactual**, template + LLM narrative, alerts API
 - [ ] M6: Allow / Monitor / Restrict / Isolate, scope snap-back, `jti` revocation, release / mark harmless / approve as change, Discord alert
 - [ ] M8: mock enterprise + canaries, replay agents (all 4), LLM agent (procurement), scenarios **A1, A3, A5, A7, B1, B2**
 - [ ] M9: dataset generator, eval with ablation + **attribution accuracy**, CI regression suite

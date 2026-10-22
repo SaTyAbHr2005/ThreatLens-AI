@@ -51,6 +51,26 @@ def test_step_up_and_quarantine_map_to_distinct_errors(client):
         hr.call("files.read", path="/hr/policies/leave.md")
 
 
+def test_tool_failure_still_returns_the_verdict(client):
+    class Broken:
+        async def call(self, tool, args, token):
+            from threatlens.gateway import ToolError
+
+            raise ToolError(503, "tool backend down")
+
+        async def aclose(self):
+            pass
+
+    client.app.state.gateway.connector = Broken()
+    agent = _agent(client, "procurement-agent", "procurement", PROCUREMENT_GRANTS)
+    r = client.post("/v1/gateway/tool-call", headers={"Authorization": f"Bearer {agent.token}"},
+                    json={"session_id": "s1", "tool": "files.read", "args": {"path": "/hr/salaries.xlsx"}})
+    body = r.json()
+    # Allowed (the risky read also raises drift, so it may already be fully logged), then the tool failed.
+    assert r.status_code == 502 and body["decision"] in ("allow", "allow_logged") and body["event_id"]
+    assert body["risk"] is not None and "tool" in body["detail"]
+
+
 def test_bad_token_is_an_auth_error(client):
     with pytest.raises(AuthError):
         ThreatLensClient("", "not.a.token", http=client).call("kb.search", q="x")

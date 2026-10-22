@@ -22,6 +22,7 @@ Handler = Callable[[Any], Awaitable[None]]
 class Topics:
     action_scored = "action.scored"
     alert_raised = "alert.raised"
+    alert_updated = "alert.updated"
     containment_changed = "containment.changed"
     content_scanned = "content.scanned"
     arena_progress = "arena.progress"

@@ -80,7 +80,8 @@ async def tool_call(
     except BadToolArgs as e:
         raise HTTPException(422, str(e)) from e
     except ToolCallFailed as e:
-        return JSONResponse(status_code=502, content={"detail": str(e), "event_id": e.event_id})
+        # The gateway's verdict (decision, risk, tier) still matters even though the tool failed.
+        return JSONResponse(status_code=502, content={**e.result.model_dump(mode="json"), "detail": str(e)})
     return JSONResponse(status_code=STATUS_BY_DECISION[result.decision], content=result.model_dump(mode="json"))
 
 

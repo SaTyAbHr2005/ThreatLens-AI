@@ -18,6 +18,8 @@ from threatlens.detection import (
     persist_periodically,
     save_baselines,
 )
+from threatlens.fusion import FusionScorer, MemoryAlertStore, MongoAlertStore, Weights, attach_minute_sink
+from threatlens.fusion.router import router as alerts_router
 from threatlens.gateway import Catalog, Gateway, HttpToolConnector, UnconfiguredConnector, attach_mongo_sinks
 from threatlens.gateway.router import router as gateway_router
 from threatlens.identity import MemoryRegistryStore, MongoRegistryStore, Registry
@@ -58,20 +60,28 @@ async def lifespan(app: FastAPI):
     )
     app.state.forensics = ContentForensics(prompt_guard, internal_domains=tuple(catalog.internal_domains))
 
+    app.state.llm = LLMRouter.from_settings(settings)
+
     baselines = await load_baselines(app.state.db) if db_ok else BaselineStore()
     embedder = make_embedder(settings.embedding_backend, settings.embedding_model, settings.models_dir)
     app.state.detector = Detector(app.state.registry, catalog, embedder, baselines)
+    app.state.fusion = FusionScorer(
+        app.state.detector, app.state.registry,
+        MongoAlertStore(app.state.db) if persist else MemoryAlertStore(),
+        weights=Weights.load(settings.fusion_weights_path), llm=app.state.llm,
+    )
 
     connector = HttpToolConnector(settings.tools_base_url) if settings.tools_base_url else UnconfiguredConnector()
     app.state.gateway = Gateway(
         app.state.registry, catalog, connector,
-        scanner=app.state.forensics, scorer=app.state.detector, settings=settings,
+        scanner=app.state.forensics, scorer=app.state.fusion, settings=settings,
     )
     unsubscribe = attach_mongo_sinks(bus, app.state.db) if persist else []
     unsubscribe.append(bus.subscribe(Topics.action_scored, app.state.detector.observe))
+    unsubscribe += app.state.fusion.attach(bus)
+    if persist:
+        unsubscribe.append(attach_minute_sink(bus, app.state.db, app.state.registry))
     saver = asyncio.create_task(persist_periodically(app.state.db, baselines)) if db_ok else None
-
-    app.state.llm = LLMRouter.from_settings(settings)
     yield
     await bus.drain()
     for off in unsubscribe:
@@ -98,6 +108,7 @@ app.add_middleware(
 app.include_router(identity_router)
 app.include_router(gateway_router)
 app.include_router(forensics_router)
+app.include_router(alerts_router)
 
 
 @app.get("/v1/health")
@@ -115,6 +126,7 @@ async def health() -> dict:
         "tool_backend": "configured" if settings.tools_base_url else "not configured",
         "content_scanner": "prompt_guard+heuristics" if app.state.forensics.prompt_guard else "heuristics",
         "embedder": app.state.detector.embedder.name,
+        "fusion_weights": app.state.fusion.weights.source,
         "baselines": {"agents": len(app.state.detector.store.agents), "roles": len(app.state.detector.store.roles)},
         "llm": app.state.llm.status(),
     }

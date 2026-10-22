@@ -178,7 +178,7 @@ class Agent(_Model):
 
     @property
     def trust(self) -> float:
-        return 100.0 - self.drift
+        return round(100.0 - self.drift, 2)
 
 
 # ---------------------------------------------------------------- actions
@@ -302,6 +302,12 @@ class Alert(_Model):
     recommendations: list[str] = Field(default_factory=list)
     status: AlertStatus = AlertStatus.open
     feedback: AlertFeedback | None = None
+    scores: dict[SignalId, float] = Field(default_factory=dict)  # all nine signals for the alerting action
+    floor: str | None = None  # tripwire that set the risk floor (canary, sensitive_then_egress, ...)
+    narrative: str | None = None  # plain-language summary written by an LLM from the structured fields
+    narrative_source: str | None = None  # e.g. "llm:gemini"; None means the template headline is used
+    updated_at: datetime = Field(default_factory=utcnow)
+    action_count: int = 1  # alerting actions folded into this alert (one alert per agent session)
 
 
 class Decision(_Model):
