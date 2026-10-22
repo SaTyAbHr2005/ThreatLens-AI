@@ -40,6 +40,14 @@ class LLMUnavailable(Exception):
     """Every provider in the chain failed or is cooling down."""
 
 
+class LLMRateLimited(LLMUnavailable):
+    """One named provider answered 429. `retry_after` is how long it asked us to wait."""
+
+    def __init__(self, message: str, retry_after: float):
+        super().__init__(message)
+        self.retry_after = retry_after
+
+
 @dataclass
 class Provider:
     name: str  # e.g. "groq" or "openrouter:<model>"
@@ -63,8 +71,9 @@ class LLMResult:
 
 
 class _RateLimited(Exception):
-    def __init__(self, retry_after: float):
+    def __init__(self, retry_after: float, detail: str = ""):
         self.retry_after = retry_after
+        self.detail = detail
 
 
 def providers_from_settings(s: Settings) -> list[Provider]:
@@ -147,16 +156,20 @@ class LLMRouter:
         raise LLMUnavailable("; ".join(tried) or f"no provider configured for task {task!r}")
 
     async def complete_with(self, provider_name: str, messages: list[dict[str, Any]], **kw: Any) -> LLMResult:
-        """Call one named provider directly (used by the LLM Susceptibility Arena)."""
+        """Call one named provider directly (used by the LLM Susceptibility Arena).
+
+        `timeout` overrides the client's per-request timeout for this call.
+        """
         p = next((p for p in self.providers if p.name == provider_name), None)
         if p is None:
             raise LLMUnavailable(f"unknown provider {provider_name!r}")
         try:
             return await self._call(
-                p, messages, kw.get("tools"), kw.get("temperature", 0.2), kw.get("max_tokens", 512)
+                p, messages, kw.get("tools"), kw.get("temperature", 0.2), kw.get("max_tokens", 512), kw.get("timeout")
             )
         except _RateLimited as e:
-            raise LLMUnavailable(f"{provider_name}: rate limited, retry in {e.retry_after:.0f}s") from e
+            why = f" ({e.detail})" if e.detail else ""
+            raise LLMRateLimited(f"{provider_name}: rate limited{why}, retry in {e.retry_after:.0f}s", e.retry_after) from e
 
     def status(self) -> list[dict[str, Any]]:
         now = time.monotonic()
@@ -181,6 +194,7 @@ class LLMRouter:
         tools: list[dict[str, Any]] | None,
         temperature: float,
         max_tokens: int,
+        timeout: float | None = None,
     ) -> LLMResult:
         body: dict[str, Any] = {
             "model": p.model,
@@ -194,9 +208,10 @@ class LLMRouter:
             f"{p.base_url}/chat/completions",
             json=body,
             headers={"Authorization": f"Bearer {p.api_key}"},
+            timeout=httpx.USE_CLIENT_DEFAULT if timeout is None else timeout,
         )
         if r.status_code == 429:
-            raise _RateLimited(_retry_after(r))
+            raise _RateLimited(_retry_after(r), _error_message(r))
         r.raise_for_status()
         msg = r.json()["choices"][0]["message"]
         return LLMResult(
@@ -212,6 +227,16 @@ def _retry_after(r: httpx.Response) -> float:
         return float(r.headers.get("retry-after", RATE_LIMIT_COOLDOWN_S))
     except ValueError:
         return RATE_LIMIT_COOLDOWN_S
+
+
+def _error_message(r: httpx.Response) -> str:
+    """The provider's own reason, e.g. OpenRouter's daily free-model cap or an upstream rate limit."""
+    try:
+        err = r.json().get("error") or {}
+        msg = str((err.get("metadata") or {}).get("raw") or err.get("message") or "")
+        return msg.split(". ")[0][:160]  # first sentence; the rest is advice and links
+    except (ValueError, AttributeError):
+        return ""
 
 
 def _cache_key(task: str, messages: list[dict[str, Any]], tools: Any) -> str:

@@ -79,3 +79,20 @@ def test_providers_built_only_for_configured_keys():
     s = Settings(env="test", groq_api_key="g", openrouter_api_key="o", openrouter_models="a/free, b/free")
     names = [p.name for p in providers_from_settings(s)]
     assert names == ["groq", "openrouter:a/free", "openrouter:b/free"]
+
+
+async def test_named_provider_rate_limit_keeps_the_reason_and_timeout_is_per_call():
+    from threatlens.core.llm import LLMRateLimited
+
+    seen = {}
+
+    def handler(req: httpx.Request):
+        seen["timeout"] = req.extensions["timeout"]["read"]
+        return httpx.Response(429, headers={"retry-after": "7"}, json={"error": {
+            "message": "Provider returned error", "metadata": {"raw": "laguna is temporarily rate-limited upstream"}}})
+
+    r = _router(handler, "openrouter")
+    with pytest.raises(LLMRateLimited) as e:
+        await r.complete_with("openrouter", [], timeout=60)
+    assert e.value.retry_after == 7 and "rate-limited upstream" in str(e.value)
+    assert seen["timeout"] == 60

@@ -15,7 +15,8 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.11"
-      - run: pip install ".[dev]"
+      # Editable, so roles/ and catalog/ resolve to the checkout (a plain install looks in site-packages).
+      - run: pip install -e ".[dev]"
       # Unit tests, the scenario suite (A1-A7, B1-B2) and the evaluation lab, all hermetic.
       - run: pytest -q
 

@@ -142,3 +142,35 @@ a {
 .theme-toggle[data-theme-now='light'] svg {
   transform: rotate(180deg);
 }
+
+/* Console loading screen (console.css isn't loaded yet, so it carries its own colors). */
+.boot {
+  min-height: 100vh;
+  display: grid;
+  place-content: center;
+  justify-items: center;
+  gap: 14px;
+  background: var(--intaglio);
+  color: var(--guilloche);
+  font-size: var(--t-13);
+}
+
+.boot svg {
+  animation: boot-breathe 1.6s var(--ease-ui) infinite alternate;
+}
+
+@keyframes boot-breathe {
+  from {
+    opacity: 0.35;
+    transform: scale(0.94);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+:root[data-theme='light'] .boot {
+  background: #e3e9e2;
+  color: #46626a;
+}

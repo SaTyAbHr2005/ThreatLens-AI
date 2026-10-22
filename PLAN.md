@@ -143,9 +143,9 @@ The module definitions, interfaces, and "done when" tests are in [ARCHITECTURE.m
 
 ### MVP (must work in the demo)
 
-- [ ] M0: schemas frozen, Mongo, event bus, LLM router (Groq → Gemini → template)
-- [ ] M1: 4 Role Contracts (procurement, HR, finance, support), tokens, amendments, `enforcement_mode`
-- [ ] M2: gateway, SDK, **downstream token exchange (A7)**, shadow mode, fail modes
+- [x] M0: schemas frozen, Mongo, event bus, LLM router (Groq → Gemini → template)
+- [x] M1: 4 Role Contracts (procurement, HR, finance, support), tokens, amendments, `enforcement_mode`
+- [x] M2: gateway, SDK, **downstream token exchange (A7)**, shadow mode, fail modes
 - [x] M3: hidden-text PDF/HTML/email extraction, v1 decoder, Prompt Guard (Groq) + agent-directed-instruction heuristics, phishing + URL risk, Forensics Lab API
 - [x] M4: all nine signals S0–S8 (S3 as a session profile), clean-only learning, baselines persisted to Atlas
 - [x] M5: logistic fusion + tripwire floors, drift score, factors/evidence, cause attribution, **counterfactual**, template + LLM narrative, alerts API
@@ -158,15 +158,15 @@ The module definitions, interfaces, and "done when" tests are in [ARCHITECTURE.m
 ### Stretch (in priority order)
 
 1. [x] Approvals page in the Console
-2. [ ] Delegation + A4 chain hijack (M1/M4 S6)
+2. [x] Delegation + A4 chain hijack (M1/M4 S6)
 3. [x] Content Forensics Lab with the UV lamp (M3 + M11)
 4. [x] LLM Susceptibility Arena (M7): live, 3–4 of 5 free models followed the hidden instruction
 5. [x] Intel page in the Console
 6. [x] Red Team test harness (M8)
-7. [ ] A2 poisoned tool, A6 mimicry (S3 session profile is done)
+7. [x] A2 poisoned web page, A6 mimicry
 8. [x] Forensic Replay page
 9. [x] Slider CAPTCHA + login anomaly on the analyst console (v1 reuse)
-10. [ ] Incident Dossier PDF export, OCSF export, AI-drafted Role Contracts
+10. [x] Incident Dossier export (Markdown; PDF not built), OCSF export, AI-drafted Role Contracts
 11. [ ] Locust load test numbers
 12. [ ] MCP proxy mode
 
@@ -189,9 +189,9 @@ Assumes **36–48 build hours**. For 24 hours, do only the MVP and drop Phase 6.
 - [ ] Idea deck (§10)
 - [ ] **60-second concept video:** a Figma or static mockup of the passport going from foil → tarnish → VOID, plus the dossier naming `supplier_quote.pdf`. This is the USP made visible.
 - [ ] Create free accounts: Vercel, Render, Atlas, HF, Groq, Gemini, OpenRouter, cron-job.org, Discord webhook. Store keys in a team password manager, never in the repo.
-- [ ] Check the free-tier limits and write them in `docs/free-tier-limits.md`
-- [ ] Pre-download models (MiniLM ONNX, injection classifier) and test fastembed under 512 MB
-- [ ] Push the repo with all five docs
+- [x] Check the free-tier limits and write them in [`docs/free-tier-limits.md`](docs/free-tier-limits.md)
+- [x] Pre-download models (MiniLM ONNX baked into the image; the injection classifier runs on Groq) and test fastembed under 512 MB
+- [x] Push the repo with all five docs
 
 ### Phase 1: Skeleton & contracts (hours 0–5)
 
@@ -257,7 +257,7 @@ Work through the stretch list (§6) in order. **Each item must be demo-ready or 
 - [ ] Lighthouse + reduced-motion + keyboard pass (DESIGN.md §8)
 - [ ] Record the **backup demo video**
 - [ ] Rehearse the demo **5+ times** with a timer, including a "Render is asleep" drill
-- [ ] Fill the deck and README with **real** eval numbers
+- [ ] Fill the deck and README with **real** eval numbers (README done)
 
 ---
 
@@ -359,6 +359,6 @@ Use the passport/hologram visual language from DESIGN.md, not a generic dark cyb
 - [ ] `docker compose up` works on a clean machine (a teammate tests it)
 - [ ] Demo video ≤ 3 minutes, linked in the README
 - [ ] Deck PDF with **real** numbers, and the USP slide as slide 4
-- [ ] `eval/results/latest.json` committed + CI badge for the scenario regression suite
-- [ ] Judge credentials in the submission form, **not** in the repo (`.env.example` has placeholders only)
+- [x] Eval results committed (`backend/catalog/eval_results.json`) + CI badge for the scenario regression suite
+- [x] Judge credentials only in Render's settings, **never** in the repo; the sign-in page shows them (`DEMO_ANALYST_PUBLIC`) so judges don't need the form
 - [ ] Team names and module ownership in the README

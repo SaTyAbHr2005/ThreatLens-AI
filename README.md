@@ -1,10 +1,14 @@
 # ThreatLens AI
 
+[![ci](https://github.com/SaTyAbHr2005/ThreatLens-AI/actions/workflows/ci.yml/badge.svg)](https://github.com/SaTyAbHr2005/ThreatLens-AI/actions/workflows/ci.yml)
+
 ### The behavioral passport for AI agents
 
 > **We don't just catch drift. We show what caused it, and we fix it without stopping the work.**
 
 AI agents now get their own tokens and permissions. When a hidden instruction in a PDF, a poisoned tool, or a stolen token takes over an agent, **its credentials stay valid**, so every access check passes. ThreatLens checks every action an agent takes against the **job it was created for**. It names the exact content that made the agent drift, and cuts the agent back to its role without shutting it down.
+
+**Live:** [threatlens-hq.vercel.app](https://threatlens-hq.vercel.app) (the console's sign-in page shows the demo account) · [API docs](https://threatlens-api-jv34.onrender.com/docs). The free API sleeps when idle, so the first request can take about 30 s.
 
 [Architecture](ARCHITECTURE.md) · [Production deployment](PRODUCTION.md) · [Design system](DESIGN.md) · [Build plan](PLAN.md) · Demo video: *coming soon*
 

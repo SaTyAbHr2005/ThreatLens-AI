@@ -105,3 +105,29 @@ def test_failure_reasons_are_readable():
     busy = httpx.HTTPStatusError("429", request=req, response=httpx.Response(429, request=req))
     assert "rate-limited" in _reason(busy)
     assert _reason(TimeoutError()).startswith("timed out")
+
+
+async def test_arena_waits_out_a_short_rate_limit(monkeypatch):
+    from threatlens.intel import arena as arena_mod
+
+    waits, tries = [], {"n": 0}
+
+    async def no_sleep(s):
+        waits.append(s)
+
+    def handler(req: httpx.Request):
+        tries["n"] += 1
+        if tries["n"] == 1:
+            return httpx.Response(429, headers={"retry-after": "5"})
+        return httpx.Response(200, json={"choices": [{"message": {"content": "Created the PR."}}]})
+
+    monkeypatch.setattr(arena_mod.asyncio, "sleep", no_sleep)
+    a = Arena(LLMRouter([Provider("busy", "openrouter", "https://busy.test/v1", "k", "m")],
+                        transport=httpx.MockTransport(handler)))
+    run = a.start(INSTRUCTION, "x")
+    await a.wait()
+    assert a.get(run.id).results[0].verdict == "resisted" and waits == [5.0]
+
+
+def test_slow_step_reason():
+    assert "took over 60 s" in _reason(httpx.ReadTimeout("slow"))
