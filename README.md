@@ -34,7 +34,7 @@ Existing tools see **either** the malicious content (prompt filters) **or** the 
 | Pillar | What it does | What you see |
 |--------|--------------|--------------|
 | **Causal Drift Attribution** | Ties every behavior change to the document, email, or tool output that caused it. Decodes the hidden instruction and shows a counterfactual. | *"Caused by supplier_quote.pdf. Hidden instruction decoded. Without it, this action would score 89 instead of 100."* (The figure depends on how much normal history the role has built up.) |
-| **Day-zero, role-anchored detection** | Compares behavior with the agent's declared **Role Contract**, so new and short-lived agents are protected from their first action. Approved changes don't raise alerts. | A brand-new agent stays green. A hijacked one is caught on its 2nd off-role action. |
+| **Day-zero, role-anchored detection** | Compares behavior with the agent's declared **Role Contract**, so new and short-lived agents are protected from their first action. Approved changes don't raise alerts. | A brand-new agent stays active with no alerts. A hijacked one is caught on its first off-role action. |
 | **Contain, don't kill** | Graduated containment removes only what's outside the role. In-role work keeps running. | 0 bytes reach the attacker, and the agent still creates purchase requests. |
 
 ## Features
@@ -54,7 +54,7 @@ Existing tools see **either** the malicious content (prompt filters) **or** the 
 - **LLM Susceptibility Arena:** tests which free LLMs would follow a captured injection (v1 LLM comparison, now measured instead of illustrated).
 - **Threat Intel Hub + fleet immunity:** a malicious file that hit one agent pre-warns every other agent (v1 threat intelligence dashboard).
 - **Protected analyst console:** Slider CAPTCHA + login-anomaly detection (v1 auth layer).
-- **Forensic replay**, **incident report export**, **AI-drafted Role Contracts**, **Discord/email alerts**, **SIEM-ready OCSF export**.
+- **Forensic replay**, **incident report export**, **AI-drafted Role Contracts**, **Discord alerts**, **SIEM-ready OCSF export**.
 
 ## Problem statement coverage
 
@@ -105,7 +105,7 @@ The system is split into 12 modules (M0–M11) with clear interfaces. See [ARCHI
 
 ## Interface
 
-The design language comes from **security documents**. Each agent has a passport whose guilloche rosette is generated from its Role Contract, with one ring per detection signal. The holographic seal **tarnishes and shows VOID** as the agent drifts. A UV lamp reveals hidden instructions inside documents, and analyst decisions land as stamps. Built with three.js, GSAP, and Lenis. See [DESIGN.md](DESIGN.md).
+The design language comes from **security documents**. Each agent has a passport whose guilloche rosette is generated from its Role Contract, with one ring per detection signal. The holographic seal **tarnishes and shows VOID** as the agent drifts. A UV lamp reveals hidden instructions inside documents, and analyst decisions land as stamps. Light and dark themes. Built with three.js, GSAP, and Lenis. See [DESIGN.md](DESIGN.md).
 
 | | |
 |---|---|
@@ -125,7 +125,7 @@ The design language comes from **security documents**. Each agent has a passport
 | LLMs | Router across **Groq**, **Gemini**, **OpenRouter** free models, **Ollama** | Free tiers / local |
 | Database | MongoDB | **MongoDB Atlas M0** |
 | Frontend | React, Vite, TypeScript, three.js, GSAP, Lenis | **Vercel** Hobby |
-| Ops | GitHub Actions, cron-job.org, Discord webhook, Resend, Locust | Free |
+| Ops | GitHub Actions, cron-job.org, Discord webhook | Free |
 
 No LLM sits in the detection path. LLMs only drive simulated agents, write alert summaries, and run the arena. Detection keeps working when every free LLM tier is rate-limited.
 
@@ -150,8 +150,8 @@ ThreatLensAI/
 ├── backend/catalog/   # tool catalog, sensitivity labels (incl. canaries), eval_results.json
 ├── backend/roles/     # Role Contract YAMLs (contracts as code)
 ├── web/               # M11 landing + console (see DESIGN.md)
-├── docs/              # diagrams, screenshots, deck, free-tier-limits.md
-├── .github/workflows/ # CI + scenario regression suite
+├── docs/              # screenshots, free-tier-limits.md
+├── .github/workflows/ # CI: tests, scenario regression suite, evaluation, web build
 ├── docker-compose.yml
 ├── render.yaml        # Render blueprint
 ├── .env.example
@@ -159,8 +159,6 @@ ThreatLensAI/
 ```
 
 ## Quick start (local)
-
-> 🚧 Under active development. Modules land one at a time. Commands for features that don't exist yet are marked *(coming)*.
 
 Everything runs in Docker, so nothing is installed on your machine. You need **Docker Desktop** and a free **MongoDB Atlas** cluster (see *Deploy for free*, step 1).
 
@@ -246,8 +244,8 @@ The web app is deployed on **Vercel** and the API on **Render**. Data lives in M
 - `web/vercel.json` rewrites deep links such as `/console/incidents/<id>` to the app. The landing's evaluation numbers are bundled from `backend/catalog/eval_results.json`, so keep Vercel's default of including files outside the root directory.
 - Deploy. Then set `CORS_ORIGINS` on Render to your `https://<project>.vercel.app` URL.
 
-**4. Keep warm during judging**
-- Create a cron-job.org job that calls `GET /v1/health` every 10 minutes. Render's free tier sleeps after about 15 idle minutes. Free instance hours (750 a month) are shared by every free service in the workspace, so keep it warm only around the judging window.
+**4. Keep it warm for a demo**
+- Create a cron-job.org job that calls `GET /v1/health` every 10 minutes. Render's free tier sleeps after about 15 idle minutes. Free instance hours (750 a month) are shared by every free service in the workspace, so keep it warm only around a demo.
 
 Free tiers sleep when idle and have memory and rate limits. See [ARCHITECTURE.md §10](ARCHITECTURE.md#10-deployment-topology-0) for how ThreatLens handles each one.
 
@@ -268,8 +266,9 @@ Free tiers sleep when idle and have memory and rate limits. See [ARCHITECTURE.md
 | `GROQ_MODEL` · `GEMINI_MODEL` · `OPENROUTER_MODELS` | Model IDs. Free lineups change, so check each provider's console. |
 | `OLLAMA_URL` | Local LLM fallback |
 | `ML_SERVICE_URL` | Leave empty to run models inside the API (default). Set it only if you split models into a second Render service. |
-| `DISCORD_WEBHOOK_URL` · `RESEND_API_KEY` | Alert notifications (optional) |
+| `DISCORD_WEBHOOK_URL` | Step-up and Isolate alerts to a Discord channel (optional) |
 | `CORS_ORIGINS` | The Vercel domain |
+| `CONSOLE_URL` | The console's public URL. Links in Discord alerts point here. |
 | `TOOLS_BASE_URL` | Where the gateway forwards allowed tool calls. Leave empty to use the built-in mock enterprise. |
 | `PROMPT_GUARD_MODEL` | Injection classifier served by Groq (uses `GROQ_API_KEY`). Default `meta-llama/llama-prompt-guard-2-86m`. Leave it empty for heuristics only. |
 | `FAIL_MODE_SENSITIVE` | `closed` (default) or `open` when the engine is unavailable |
@@ -303,9 +302,12 @@ With enforcement on: 100% of legitimate actions allowed, 100% of malicious actio
 ## Roadmap
 
 - [x] Architecture, production, design, and build plans
-- [ ] MVP: gateway, core signals, fusion, containment, landing + console, scenarios A1/A3/A5/A7/B1/B2
-- [ ] Step-up approvals, delegation + chain hijack
-- [ ] Content Forensics Lab, LLM Arena, fleet immunity, Red Team Studio
+- [x] MVP: gateway, core signals, fusion, containment, landing + console, scenarios A1/A3/A5/A7/B1/B2
+- [x] Step-up approvals, delegation + chain hijack
+- [x] Content Forensics Lab, LLM Arena, fleet immunity, Red Team Studio
+- [x] Evaluation lab and scenario regression suite in CI
+- [x] Free-tier deployment (Vercel, Render, MongoDB Atlas)
+- [ ] Email alerts
 - [ ] MCP proxy mode, real IdP adapter, SIEM connectors
 
 ## Built on ThreatLens v1
