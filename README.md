@@ -10,9 +10,9 @@ AI agents now get their own tokens and permissions. When a hidden instruction in
 
 **Live:** [threatlens-hq.vercel.app](https://threatlens-hq.vercel.app) (the console's sign-in page shows the demo account) · [API docs](https://threatlens-api-jv34.onrender.com/docs). The free API sleeps when idle, so the first request can take about 30 s.
 
-[Architecture](ARCHITECTURE.md) · [Production deployment](PRODUCTION.md) · [Design system](DESIGN.md) · [Build plan](PLAN.md) · Demo video: *coming soon*
+[Architecture](ARCHITECTURE.md) · [Production deployment](PRODUCTION.md) · [Design system](DESIGN.md) · [Build plan](PLAN.md) · [Demo video (3 min)](https://drive.google.com/file/d/19yQ0Ep0WlTJoqErD9kT9H1GREHB1mDTS/view?usp=drive_link)
 
-![The A1 hijack on the landing page: a poisoned supplier PDF, the passport seal tarnishing to VOID, the upload contained and the outer rings clamped](docs/screenshots/hijack-story.gif)
+[![Watch the 3-minute demo: the A1 hijack on the landing page, then the console, the incident report, the LLM Arena and the evaluation](docs/screenshots/demo-video.jpg)](https://drive.google.com/file/d/19yQ0Ep0WlTJoqErD9kT9H1GREHB1mDTS/view?usp=drive_link)
 
 ---
 
